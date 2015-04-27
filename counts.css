@@ -1,0 +1,145 @@
+@charset "utf-8";
+/* CSS Document */
+body	{
+	text-align: center;
+	font-family: Arial, Helvetica, sans-serif;
+	border-collapse: collapse;
+}
+h1	{
+	font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+	font-size: 16pt;
+	margin: 0.5em 1em 0 1em;
+}
+h2	{
+	font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+	font-size: 12pt;
+	text-transform: uppercase;
+	margin: 0 0 0.5em 0;
+}
+label	{
+	font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
+	font-size: 9pt;
+}
+
+#allDiv	{
+	width: 100%;
+}
+#queryDiv	{
+	display: inline-block;
+	vertical-align: top;
+	width: 48.5%;
+	min-width: 440px;
+	padding: 1% 0.5% 1% 1%;
+	border-right: 1px black solid;
+}
+#queryGeoDiv	{
+	width: 100%;
+}
+#queryMapControl	{
+	display: inline-block;
+	width: 65%;
+	height: 400px;
+	background-color: silver;
+	padding-right: 2%;
+}
+#queryLocControlsDiv	{
+	display: inline-block;
+	vertical-align: top;
+	width: 29%;
+	padding: 0 2% 0 2%;
+	text-align: left;
+}
+#queryLocControlsDiv input[type=text]	{
+	width: 100%;
+	margin-bottom: 4pt;
+}
+#queryTypeDiv	{
+	display: inline-block;
+	vertical-align: top;
+	width: 31%;
+	padding: 1% 2% 1% 0;
+	text-align: left;
+}
+#queryTypeDiv input[type=text]	{
+	width: 100%;
+	margin: 0 0 4pt 0;
+}
+#sumCatsDiv	{
+	display: none;
+}
+#sumDirsDiv	{
+	display: none;
+}
+#sumLanesDiv	{
+	display: none;
+}
+#ADTDiv	{
+	display: none;
+}
+#queryTimeDiv	{
+	display: inline-block;
+	vertical-align: top;
+	width: 29%;
+	padding: 1% 2% 1% 2%;
+	text-align: left;
+	border-left: 1px silver solid;
+	border-right: 1px solid silver;
+}
+#daysDiv	{
+	display: none;
+	margin-left: 1em;
+}
+#monthsDiv	{
+	display: none;
+	margin-left: 1em;
+}
+#avgDaysDiv	{
+	margin-left: 1em;
+}
+#aggregationIntervalDiv	{
+	display: none;
+}
+#queryProjDiv	{
+	display: inline-block;
+	vertical-align: top;
+	width: 29%;
+	padding: 1% 2% 1% 2%;
+	text-align: left;
+}
+#queryProjDiv input[type=text]	{
+	width: 100%;
+	margin: 0 0 4pt 0;
+}
+#queryRespPartsDiv	{
+	text-align: left;
+}
+#hierarchyDiv	{
+	height: 20px;
+	padding: 1% 2% 1% 0;
+}
+#treeControlDiv	{
+	height: 100px;
+	padding: 1% 2% 1% 0;
+}
+#queryFinalDataDiv	{
+	text-align: right;
+	padding: 1% 2% 1% 0;
+}
+#responseDiv	{
+	display: inline-block;
+	vertical-align: top;
+	width: 47%;
+	min-width: 440px;
+	text-align: left;
+	padding: 1%;
+}
+#responseFormatDiv	{
+	height: 100px;
+	background-color: silver;
+}
+#responseOutputDiv	{
+	height: 600px;
+}
+#responseManipulationDiv	{
+	text-align: right;
+}

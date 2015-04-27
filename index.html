@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>CTPS Traffic Count Query Application</title>
+<link rel="stylesheet" href="/apps/libs/jqueryui/jquery-ui-1.10.4.custom/css/cupertino/jquery-ui-1.10.4.custom.css">
+<script src="/apps/libs/jqueryui/jquery-ui-1.10.4.custom/js/jquery-1.10.2.js"></script>
+<script src="/apps/libs/jqueryui/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.js"></script>
+<script src="counts.js"></script>
+<link rel="stylesheet" href="counts.css">
+</head>
+
+<body><div id="allDiv">
+
+	<h1>Traffic Counts</h1>
+
+	<div id="queryDiv">
+    	<form id="theForm" method="post" action="query_count_parts.cfm" >
+    
+            <div id="queryGeoDiv">
+                <div id="queryMapControl"><div style="margin-top:40%;">&lt;future map control&gt;</div>
+                </div><div id="queryLocControlsDiv">
+                	<h2>Where</h2>
+                	<label for="townControl">Town</label><input id="townControl" name="tn" type="text">
+                    <label for="routeControl">Route</label><input id="routeControl" name="rt" type="text">
+                    <label for="streetControl">Street</label><input id="streetControl" name="st" type="text">
+                    <input id="streetExactControl" name="stX" type="checkbox"><label for="streetExactControl">Exact matches only</label><br>
+                    <label for="regionControl">Region</label><input id="regionControl" name="rg" type="text">
+                    <label for="funcClassControl">Functional classification</label><input id="funcClassControl" name="fc" type="text">
+                    <label for="facTypeControl">Facility type</label><input id="facTypeControl" name="ft" type="text">
+                    <label for="locIDControl">Location/station ID</label><input id="locIDControl" name="loc" type="text">
+                    <input id="withinMapControl" name="ext" type="checkbox" checked><label for="withinMapControl">Search only within map extent</label>
+                </div>
+            </div>
+    
+            <div id="queryTypeDiv">
+            	<h2>What</h2>
+            	<label for="typeControl">Type</label><input id="typeControl" name="type" type="text">
+                <div id="sumCatsDiv"><input id="sumCatsControl" name="catSum" type="checkbox"><label for="sumCatsControl">Sum categories</label></div>
+                <div id="sumDirsDiv"><input id="sumDirsControl" name="dirSum" type="checkbox"><label for="sumDirsControl">Sum directions</label></div>
+                <div id="sumLanesDiv"><input id="sumLanesControl" name="lnSum" type="checkbox"><label for="sumLanesControl">Sum lanes</label></div>
+                <div id="ADTDiv">
+                	<input id="ADTAnnualControl" name="adt" type="radio" value="a" checked><label for="ADTAnnualControl">Annual</label>
+	                <input id="ADTMonthlyControl" name="adt" type="radio" value="m"><label for="ADTMonthlyControl">Monthly</label>
+                </div>
+            </div><div id="queryTimeDiv">
+            	<h2>When</h2>
+            	<label for="fromDateControl">Date range</label><br><input id="fromDateControl" name="frm" type="text" size="6">
+                <label for="toDateControl">to </label><input id="toDateControl" name="to" type="text" size="6"><br>
+                <input id="mostRecentControl" name="rec" type="checkbox"><label for="mostRecentControl">Most recent only</label><br>
+                <div>
+                    <input id="allDaysControl" name="days" type="checkbox" checked><label for="allDaysControl">All days</label>
+                    <div id="daysDiv">
+                        <input id="sundayControl" name="sun" type="checkbox"><label for="sundayControl">Su</label>
+                        <input id="mondayControl" name="mon" type="checkbox"><label for="mondayControl">M</label>
+                        <input id="tuesdayControl" name="tue" type="checkbox"><label for="tuesdayControl">T</label>
+                        <input id="wednesdayControl" name="wed" type="checkbox"><label for="wednesdayControl">W</label>
+                        <input id="thursdayControl" name="thu" type="checkbox"><label for="thursdayControl">Th</label>
+                        <input id="fridayControl" name="fri" type="checkbox"><label for="fridayControl">F</label>
+                        <input id="saturdayControl" name="sat" type="checkbox"><label for="saturdayControl">Sa</label>
+                    </div>
+                </div>
+                <div>
+                    <input id="allMonthsControl" name="mos" type="checkbox" checked><label for="allMonthsControl">All months</label>
+                    <div id="monthsDiv">
+                        <input id="janControl" name="j" type="checkbox"><label for="janControl">J</label>
+                        <input id="febControl" name="f" type="checkbox"><label for="febControl">F</label>
+                        <input id="marControl" name="mar" type="checkbox"><label for="marControl">M</label>
+                        <input id="aprControl" name="apr" type="checkbox"><label for="aprControl">A</label>
+                        <input id="mayControl" name="may" type="checkbox"><label for="mayControl">M</label>
+                        <input id="junControl" name="jun" type="checkbox"><label for="junControl">J</label>
+                        <input id="julControl" name="jul" type="checkbox"><label for="julControl">J</label>
+                        <input id="augControl" name="aug" type="checkbox"><label for="augControl">A</label>
+                        <input id="sepControl" name="s" type="checkbox"><label for="sepControl">S</label>
+                        <input id="octControl" name="o" type="checkbox"><label for="octControl">O</label>
+                        <input id="novControl" name="n" type="checkbox"><label for="novControl">N</label>
+                        <input id="decControl" name="d" type="checkbox"><label for="decControl">D</label>
+                    </div>
+                </div>
+                <input id="avgDaysControl" name="avg" type="checkbox"><label for="avgDaysControl">Average days</label>
+                <div id="avgDaysDiv">
+                	<input id="avgDaysByDOWControl" name="avgD" type="checkbox"><label for="avgDaysByDOWControl">By day of week</label>
+                    <input id="avgDaysByMonthControl" name="avgM" type="checkbox"><label for="avgDaysByMonthControl">By month</label>
+                </div>
+                <div id="aggregationIntervalDiv">
+                	<input id="hourlyControl" name="aggr" type="radio" value="h" checked><label for="hourlyControl">Aggregate to hours</label>
+                    <input id="qtrHourlyControl" name="aggr" type="radio" value="q"><label for="qtrHourlyControl">Quarter-hourly data only</label>
+                </div>
+            </div><div id="queryProjDiv">
+            	<h2>Who</h2>
+            	<label for="projControl">Counts collected for</label><input id="projControl" name="prj" type="text">
+            </div>
+            
+            <div id="queryRespPartsDiv">
+            	<div id="hierarchyDiv">
+                    <h2>Which</h2>
+                </div>
+                <div id="treeControlDiv"></div>
+                <div id="queryFinalDataDiv">
+                	<button>Show all</button><button>Download all</button>
+                </div>
+            </div>
+    
+    	</form>
+        
+    </div><div id="responseDiv">
+    
+    	<div id="responseFormatDiv">
+        	<h2>How</h2>
+        </div>
+        
+        <div id="responseOutputDiv">
+        </div>
+        
+        <div id="responseManipulationDiv">
+        	<button>Print</button>
+        </div>
+    
+    </div>
+    
+	<script>
+        $(document).ready(function() {
+            CTPS.countsApp.initSubmit();	
+        });
+    </script>   
+</div></body>
+</html>
