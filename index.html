@@ -3,8 +3,12 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <title>CTPS Traffic Count Query Application</title>
 <link rel="stylesheet" href="/apps/libs/jqueryui/jquery-ui-1.10.4.custom/css/cupertino/jquery-ui-1.10.4.custom.css">
+<link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
 <script src="/apps/libs/jqueryui/jquery-ui-1.10.4.custom/js/jquery-1.10.2.js"></script>
 <script src="/apps/libs/jqueryui/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.js"></script>
+<script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+<script src="/apps/libs/proj4js/proj4js-2.2.1/dist/proj4.js"></script>
+<script src="/apps/libs/d3/d3-3.5.3/d3.min.js"></script>
 <script src="counts.js"></script>
 <link rel="stylesheet" href="counts.css">
 </head>
@@ -14,12 +18,16 @@
 	<h1>Traffic Counts</h1>
 
 	<div id="queryDiv">
-    	<form id="theForm" method="post" action="query_count_parts.cfm" >
+    	<form id="theForm" name="theForm" method="post" action="query_count_parts.cfm" >
     
             <div id="queryGeoDiv">
-                <div id="queryMapControl"><div style="margin-top:40%;">&lt;future map control&gt;</div>
+                <div id="queryMapControl"><div style="margin-top:40%;"></div>
                 </div><div id="queryLocControlsDiv">
                 	<h2>Where</h2>
+                    <input id="minXControl" name="minX" type="hidden">
+                    <input id="maxXControl" name="maxX" type="hidden">
+                    <input id="minYControl" name="minY" type="hidden">
+                    <input id="maxYControl" name="maxY" type="hidden">
                 	<label for="townControl">Town</label><input id="townControl" name="tn" type="text">
                     <label for="routeControl">Route</label><input id="routeControl" name="rt" type="text">
                     <label for="streetControl">Street</label><input id="streetControl" name="st" type="text">
@@ -28,7 +36,7 @@
                     <label for="funcClassControl">Functional classification</label><input id="funcClassControl" name="fc" type="text">
                     <label for="facTypeControl">Facility type</label><input id="facTypeControl" name="ft" type="text">
                     <label for="locIDControl">Location/station ID</label><input id="locIDControl" name="loc" type="text">
-                    <input id="withinMapControl" name="ext" type="checkbox" checked><label for="withinMapControl">Search only within map extent</label>
+                    <input id="withinMapControl" name="ext" type="checkbox"><label for="withinMapControl">Search only within map extent</label>
                 </div>
             </div>
     
@@ -39,7 +47,7 @@
                 <div id="sumDirsDiv"><input id="sumDirsControl" name="dirSum" type="checkbox"><label for="sumDirsControl">Sum directions</label></div>
                 <div id="sumLanesDiv"><input id="sumLanesControl" name="lnSum" type="checkbox"><label for="sumLanesControl">Sum lanes</label></div>
                 <div id="ADTDiv">
-                	<input id="ADTAnnualControl" name="adt" type="radio" value="a" checked><label for="ADTAnnualControl">Annual</label>
+                	<input id="ADTAnnualControl" name="adt" type="radio" value="a"><label for="ADTAnnualControl">Annual</label>
 	                <input id="ADTMonthlyControl" name="adt" type="radio" value="m"><label for="ADTMonthlyControl">Monthly</label>
                 </div>
             </div><div id="queryTimeDiv">
