@@ -53,6 +53,12 @@ label	{
 	width: 100%;
 	margin-bottom: 4pt;
 }
+#queryLocControlsDiv select	{
+	display: block;
+	width: 100%;
+	margin-bottom: 4pt;
+}
+
 #queryTypeDiv	{
 	display: inline-block;
 	vertical-align: top;
@@ -63,6 +69,11 @@ label	{
 #queryTypeDiv input[type=text]	{
 	width: 100%;
 	margin: 0 0 4pt 0;
+}
+#queryTypeDiv select  {
+	display: block;
+	width: 100%;
+	margin-bottom: 4pt;
 }
 #sumCatsDiv	{
 	display: none;
@@ -109,6 +120,11 @@ label	{
 #queryProjDiv input[type=text]	{
 	width: 100%;
 	margin: 0 0 4pt 0;
+}
+#queryProjDiv select  {
+	display: block;
+	width: 100%;
+	margin-bottom: 4pt;
 }
 #queryRespPartsDiv	{
 	text-align: left;

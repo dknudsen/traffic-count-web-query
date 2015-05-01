@@ -19,6 +19,8 @@
 
 	<div id="queryDiv">
     	<form id="theForm" name="theForm" method="post" action="query_count_parts.cfm" >
+        
+        	<input id="modeControl" name="mode" type="hidden" value="init">
     
             <div id="queryGeoDiv">
                 <div id="queryMapControl"><div style="margin-top:40%;"></div>
@@ -28,13 +30,34 @@
                     <input id="maxXControl" name="maxX" type="hidden">
                     <input id="minYControl" name="minY" type="hidden">
                     <input id="maxYControl" name="maxY" type="hidden">
-                	<label for="townControl">Town</label><input id="townControl" name="tn" type="text">
-                    <label for="routeControl">Route</label><input id="routeControl" name="rt" type="text">
+                	<label for="townControl">Town</label><select id="townControl" name="tn"><option value=""></option></select>
+                    <label for="routeControl">Route</label><select id="routeControl" name="rt"><option value=""></option></select>
                     <label for="streetControl">Street</label><input id="streetControl" name="st" type="text">
                     <input id="streetExactControl" name="stX" type="checkbox"><label for="streetExactControl">Exact matches only</label><br>
                     <label for="regionControl">Region</label><input id="regionControl" name="rg" type="text">
-                    <label for="funcClassControl">Functional classification</label><input id="funcClassControl" name="fc" type="text">
-                    <label for="facTypeControl">Facility type</label><input id="facTypeControl" name="ft" type="text">
+                    <label for="funcClassControl">Functional classification</label><select id="funcClassControl" name="fc">
+                    	<option value=""></option>
+                    	<option value="1">Interstate</option>
+                        <option value="2">Principal arterial</option>
+                        <option value="3">Urban principal/rural minor arterial</option>
+                        <option value="5">Urban minor art./rural maj. collector</option>
+                        <option value="6">Urban collector/rural minor collector</option>
+                        <option value="0">Local (not classificed)</option>
+                    </select>
+                    <label for="facTypeControl">Facility type</label><select id="facTypeControl" name="ft">
+                    	<option value=""></option>
+                    	<option value="1">Mainline roadway</option>
+                    	<option value="2">Roundabout</option>
+                    	<option value="3">Tunnel</option>
+                    	<option value="4">Doubledeck</option>
+                    	<option value="5">Rotary</option>
+                    	<option value="6">Causeway</option>
+                    	<option value="7">Simple ramp</option>
+                    	<option value="8">Ramp - NB/EB</option>
+                    	<option value="9">Ramp - SB/WB</option>
+                    	<option value="10">Collector-Distributor</option>
+                    	<option value="11">Simple ramp - tunnel</option>
+                    </select>
                     <label for="locIDControl">Location/station ID</label><input id="locIDControl" name="loc" type="text">
                     <input id="withinMapControl" name="ext" type="checkbox"><label for="withinMapControl">Search only within map extent</label>
                 </div>
@@ -42,7 +65,7 @@
     
             <div id="queryTypeDiv">
             	<h2>What</h2>
-            	<label for="typeControl">Type</label><input id="typeControl" name="type" type="text">
+            	<label for="typeControl">Type</label><select id="typeControl" name="type"><option value=""></option></select>
                 <div id="sumCatsDiv"><input id="sumCatsControl" name="catSum" type="checkbox"><label for="sumCatsControl">Sum categories</label></div>
                 <div id="sumDirsDiv"><input id="sumDirsControl" name="dirSum" type="checkbox"><label for="sumDirsControl">Sum directions</label></div>
                 <div id="sumLanesDiv"><input id="sumLanesControl" name="lnSum" type="checkbox"><label for="sumLanesControl">Sum lanes</label></div>
@@ -55,7 +78,7 @@
             	<label for="fromDateControl">Date range</label><br><input id="fromDateControl" name="frm" type="text" size="6">
                 <label for="toDateControl">to </label><input id="toDateControl" name="to" type="text" size="6"><br>
                 <input id="mostRecentControl" name="rec" type="checkbox"><label for="mostRecentControl">Most recent only</label><br>
-                <div>
+                <div class="nestedCheckboxes">
                     <input id="allDaysControl" name="days" type="checkbox" checked><label for="allDaysControl">All days</label>
                     <div id="daysDiv">
                         <input id="sundayControl" name="sun" type="checkbox"><label for="sundayControl">Su</label>
@@ -67,7 +90,7 @@
                         <input id="saturdayControl" name="sat" type="checkbox"><label for="saturdayControl">Sa</label>
                     </div>
                 </div>
-                <div>
+                <div class="nestedCheckboxes">
                     <input id="allMonthsControl" name="mos" type="checkbox" checked><label for="allMonthsControl">All months</label>
                     <div id="monthsDiv">
                         <input id="janControl" name="j" type="checkbox"><label for="janControl">J</label>
@@ -95,7 +118,7 @@
                 </div>
             </div><div id="queryProjDiv">
             	<h2>Who</h2>
-            	<label for="projControl">Counts collected for</label><input id="projControl" name="prj" type="text">
+            	<label for="projControl">Counts collected for</label><select id="projControl" name="prj"><option value=""></option></select>
             </div>
             
             <div id="queryRespPartsDiv">
