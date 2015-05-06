@@ -10,7 +10,7 @@
 <cfset isNoParamInvoke = StructCount(params) EQ 0>
 
 <!--- set empty values for all undefined parameters to simplify later tests --->
-<cfset paramList = "mode,tn,rt,st,stX,rg,fc,ft,loc,ext,minx, maxx, miny, maxy," &
+<cfset paramList = "mode,tn,rt,st,stX,rg,fc,ft,loc,ext,mapX,aoi" &
 				   "type,catSum,dirSum,lnSum,adt," &
 				   "frm,to,rec," &
 				   "days,sun,mon,tue,wed,thu,fri,sat," &
@@ -26,16 +26,26 @@
 <cfset respFrac = 1 * IIf(params.tn EQ "",1,0.003) * IIf(params.rt EQ "",1,0.005) * IIf(params.st EQ "",1,0.0002)>
 <!---   FUNCTIONAL CLASSIFICATION --->
 <cfset respFrac = respFrac * IIf(params.fc EQ "1" OR params.fc EQ "2" OR params.fc EQ "3" OR params.fc EQ "5",0.2,1) * IIf(params.fc EQ "6",0.06,1) * IIf(params.fc EQ "0",0.02,1)>
-<!---   FAcILITY TYPE --->
+<!---   FACILITY TYPE --->
 <cfset respFrac = respFrac * IIf(params.ft EQ "1",0.9,IIf(params.ft EQ "7",0.01,IIf(params.ft NEQ "",0.001,1)))>
 <!---   LOCATION IDs --->
-<cfset respFrac = respFrac * IIf(params.loc EQ "",1,ArrayLen(REMatch(",",params.loc))/14000)>
+<cfset respFrac = respFrac * IIf(params.loc EQ "",1,(ArrayLen(REMatch(",",params.loc))+1)/14000)>
+<!---   GEOGRAPHIC AREA --->
+<cfif params.aoi NEQ "" OR (params.ext NEQ "" AND params.mapX NEQ "")>
+	<cfquery name="geoArea" datasource="counts"><cfoutput>SELECT sde.st_area(<cfif params.aoi NEQ "" AND params.mapX NEQ "">sde.st_intersection(</cfif><cfif 
+																				   params.mapX NEQ "">sde.st_geometry('#params.mapX#',19)</cfif><cfif 
+																				   params.aoi NEQ "" AND params.mapX NEQ "">,</cfif><cfif
+																				   params.aoi NEQ "">sde.st_geometry('#params.aoi#',19)</cfif><cfif
+                                                                                   params.aoi NEQ "" AND params.mapX NEQ "">)</cfif>) AS geo_area FROM dual</cfoutput></cfquery>
+    <cfoutput query="geoArea"><cfset respFrac = respFrac * IIf(geo_area GTE 27336000000, 1, geo_area / 27336000000)></cfoutput>
+</cfif>
 <!---   COUNT TYPE --->
 <cfset respFrac = respFrac * IIf(params.type EQ "1" OR params.type EQ "2",0.35,IIf(params.type EQ "3" OR params.type EQ "4",0.15,IIf(params.type NEQ "",0.01,1)))>
 <!---   DATA TABLE RESTRICTION --->
 <cfset respFrac = respFrac * IIf(params.adt EQ "m",0.02,1) * IIf(params.aggr EQ "q",0.5,1)>
 <!---   DATE RANGE --->
-<!---<cfset respFrac = respFrac * DateDiff("d",IIf(params.frm EQ "",CreateDate(1962,1,1),ParseDateTime(params.frm)),IIf(params.to EQ "",Now(),ParseDateTime(params.to))) / DateDiff("d",CreateDate(1962,1,1),Now())>--->
+<cfset respFrac = respFrac * DateDiff("d",IIf(params.frm EQ "","CreateDate(1962,1,1)","ParseDateTime(params.frm)"),
+										  IIf(params.to EQ "","Now()","ParseDateTime(params.to)")) / DateDiff("d",CreateDate(1962,1,1),Now())>
 <!---   MONTH RESTRICTION --->
 <cfset respFrac = respFrac * IIf(params.mos EQ "",
 								 Len(params.j & params.f & params.mar & params.apr & params.may & params.jun & params.jul & params.aug & params.s & params.o & params.n & params.d)/24,1)>
@@ -69,7 +79,7 @@
         </cfquery>
     
 	<!--- COUNT-BASED DOMAINS --->
-    <cfquery name="counts" datasource="counts" cachedwithin="#oneWeek#">
+    <cfquery name="counts" datasource="counts" result="main_query" cachedwithin="#oneWeek#">
     	SELECT 
         	agency AS agency_id, agency.org_name AS agency, client AS client_id, client.org_name AS client,
             c.project_id, p.name AS project_name, p.description AS project_description,
@@ -137,7 +147,7 @@
 		query="qhRows">"data_quarter_hourly":#qhRows#,</cfoutput><cfoutput
 		query="mRows">"data_monthly":#mRows#,</cfoutput><cfoutput
 		query="sRows">"data_spanning":#sRows#</cfoutput><cfoutput
-	>},"estRespFrac":#respFrac#}</cfoutput>
+	>},"estRespFrac":#respFrac#,"querySQL":"#JSStringFormat(main_query.sql)#"}</cfoutput>
 
 <!--- mode: run parameterized queries of count database; values: not "init" or empty --->
 <cfelse>
@@ -149,7 +159,7 @@
         <cfset isJoinRoads = (params.fc != "") OR (params.ft != "")>
         <cfset isJoinCountParts = (params.catSum != "") OR (params.dirSum != "") OR (params.lnSum != "") OR (params.adt != "" OR True)>
         <cfset isJoinCounts = isJoinCountParts OR (params.type != "") OR (params.frm != "") OR (params.to != "") OR (params.rec != "") OR (params.prj != "")>
-        <cfquery name="cp" datasource="counts"><cfoutput>
+        <cfquery name="cp" datasource="counts" result="main_query"><cfoutput>
             SELECT 
                 l.count_location_id, 
                 l.streetname, 
@@ -184,7 +194,7 @@
                 cp.date_end,
                 cp.description AS cp_desc,
                 DECODE(c.type_id,4,EXTRACT(YEAR FROM cp.date_end) - EXTRACT(YEAR FROM cp.date_start) + 1,
-                	TRUNC(cp.date_end) - TRUNC(cp.date_start) + 1) AS est_data_rows
+                    TRUNC(cp.date_end) - TRUNC(cp.date_start) + 1) AS est_data_rows
             FROM 
                 count_locations l, 
                 towns_r_data t<cfif isJoinRoads>,
@@ -196,17 +206,21 @@
                 AND l.roadinventory_id = r.roadinventory_id</cfif>
                 AND l.count_location_id = c.count_loc_id
                 AND c.agency = agency.contact_id
-                AND c.client = agency.contact_id
+                AND c.client = client.contact_id
                 AND c.type_id = types.type_id
                 AND c.project_id = projects.project_id
                 AND c.count_id = cp.count_id<cfif params.tn NEQ "">
                 AND l.town_id = #params.tn#</cfif><cfif params.rt NEQ "">
                 AND auto_rte_number = '#params.rt#'</cfif><cfif params.st NEQ "">
-                <cfif params.stX EQ "">AND l.streetname = UPPER('#params.st#')<cfelse>AND SOUNDEX(l.streetname) = SOUNDEX('#params.st#')</cfif></cfif><cfif params.fc NEQ "">
+                <cfif params.stX NEQ "">AND l.streetname = UPPER('#params.st#')<cfelse>AND SOUNDEX(l.streetname) = SOUNDEX('#params.st#')</cfif></cfif><cfif params.fc NEQ "">
                 AND r.functionalclassification = #params.fc#</cfif><cfif params.ft NEQ "">
                 AND r.facilitytype = '#params.ft#'</cfif><cfif params.loc NEQ "">
-                AND l.count_location_id IN (#params.loc#)</cfif><cfif params.ext NEQ "" AND params.minX NEQ "" AND params.maxX NEQ "" AND params.minY NEQ "" AND params.maxY NEQ "">
-                AND sde.st_overlaps(l.shape, sde.st_polyfromtext('polygon ((#params.minX# #params.minY#, #params.maxX# #params.minY#, #params.maxX# #params.maxY#, #params.minX# #params.maxY#, #params.minX# #params.minY#))', 19)) = 1</cfif><cfif params.type NEQ "">
+                AND l.count_location_id IN (#params.loc#)</cfif><cfif params.aoi NEQ "" OR (params.ext NEQ "" AND params.mapX NEQ "")>
+                AND sde.st_intersects(l.shape, <cfif params.aoi NEQ "" AND params.mapX NEQ "">sde.st_intersection(</cfif><cfif
+                									 params.mapX NEQ "">sde.st_geometry('#params.mapX#', 19)</cfif><cfif
+                                                     params.aoi NEQ "" AND params.mapX NEQ "">,</cfif><cfif
+                                                     params.aoi NEQ "">sde.st_geometry('#params.aoi#', 19)</cfif><cfif
+                                                     params.aoi NEQ "" AND params.mapX NEQ "">)</cfif>) = 1</cfif><cfif params.type NEQ "">
                 AND c.type_id = #params.type#</cfif><cfif params.adt NEQ "">
                 AND cp.data_table = '<cfif params.adt EQ "a">spanning<cfelse>monthly</cfif>'</cfif><cfif params.frm NEQ "">
                 AND date_end > TO_DATE('#params.frm#','MM/DD/YYYY')</cfif><cfif params.to NEQ "">
@@ -270,7 +284,7 @@
           query="distinctTables">,"data_#data_table#":true</cfoutput><cfoutput 
           query="distinctTypes"><cfif distinctTypes.RecordCount EQ 1>,"distinctType":"#type#"</cfif></cfoutput><cfoutput
         >,"numCats":#distinctCats.RecordCount#,"numDirs":#distinctDirs.RecordCount#,"numLanes":#distinctLanes.RecordCount#</cfoutput><cfoutput 
-		query="estDataRows">,"estDataRows":#total_est_data_rows#</cfoutput><cfoutput>,"estRespFrac":#respFrac#}</cfoutput>
+		query="estDataRows">,"estDataRows":#total_est_data_rows#</cfoutput><cfoutput>,"estRespFrac":#respFrac#<!---,"querySQL":"#JSStringFormat(main_query.sql)#"--->}</cfoutput>
 
     </cfif>
     
