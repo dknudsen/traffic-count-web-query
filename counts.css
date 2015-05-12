@@ -16,11 +16,16 @@ h2	{
 	text-transform: uppercase;
 	margin: 0 0 0.5em 0;
 }
+h3	{
+	font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+	font-size: 12pt;
+	text-transform: capitalize;
+	margin: 0 0 0.5em 0;
+}
 label	{
 	font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
 	font-size: 9pt;
 }
-
 #allDiv	{
 	width: 100%;
 }
@@ -154,7 +159,16 @@ label	{
 	background-color: silver;
 }
 #responseOutputDiv	{
+	overflow: scroll;
 	height: 600px;
+}
+#responseOutputDiv th	{
+	font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
+	font-size: 10pt;
+}
+#responseOutputDiv td	{
+	font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
+	font-size: 9pt;
 }
 #responseManipulationDiv	{
 	text-align: right;

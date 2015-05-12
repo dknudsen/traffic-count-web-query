@@ -20,6 +20,8 @@
 <cfloop index="p" delimiters="," list=#paramList#>
 	<cfif NOT IsDefined("params." & p)><cfset params[p] = ""></cfif>
 </cfloop>
+<!--- correct inconsistent params --->
+<cfif params.mode NEQ "4"><cfset params.adt = ""></cfif>
 
 <!--- estimate size of response recordset --->
 <!---   TOWN, ROUTE, STREET --->
@@ -55,6 +57,9 @@
 <!--- set some useful variables --->
 <cfset oneMonth = CreateTimeSpan(30,0,0,0)>
 <cfset oneWeek = CreateTimeSpan(7,0,0,0)>
+
+<!--- always generate the opening brace of the JSON to be returned --->
+<cfoutput>{</cfoutput>
 
 <!--- MAIN BRANCH -- page runs different queries based upon the mode parameter --->
 <!--- mode: get domains of count database; values: "init" or empty --->
@@ -132,7 +137,7 @@
         <cfquery name="sRows" datasource="counts" cachedwithin="#oneMonth#">SELECT count(*) AS sRows from data_spanning</cfquery>
 
 	<!--- OUTPUT the JSON --->
-    <cfoutput>{"geoExtent":[</cfoutput><cfoutput query="geoExtent">[#min_x#,#min_y#],[#max_x#,#max_y#]</cfoutput><cfoutput 
+    <cfoutput>"geoExtent":[</cfoutput><cfoutput query="geoExtent">[#min_x#,#min_y#],[#max_x#,#max_y#]</cfoutput><cfoutput 
     >],"townList":[</cfoutput><cfoutput query="townList">["#town#",#town_id#]<cfif currentRow NEQ RecordCount>,</cfif></cfoutput><cfoutput 
 	>],"routeList":[</cfoutput><cfoutput query="routeList">"#auto_rte_number#"<cfif currentRow NEQ RecordCount>,</cfif></cfoutput><cfoutput
 	>],"agencyList":[</cfoutput><cfoutput query="agencyList">{"agency":"#agency#","agency_id":#agency_id#}<cfif currentRow NEQ RecordCount>,</cfif></cfoutput><cfoutput
@@ -147,7 +152,7 @@
 		query="qhRows">"data_quarter_hourly":#qhRows#,</cfoutput><cfoutput
 		query="mRows">"data_monthly":#mRows#,</cfoutput><cfoutput
 		query="sRows">"data_spanning":#sRows#</cfoutput><cfoutput
-	>},"estRespFrac":#respFrac#,"querySQL":"#JSStringFormat(main_query.sql)#"}</cfoutput>
+	>},"estRespFrac":#respFrac#,"querySQL":"#JSStringFormat(main_query.sql)#"</cfoutput>
 
 <!--- mode: run parameterized queries of count database; values: not "init" or empty --->
 <cfelse>
@@ -157,8 +162,6 @@
 
 		<!--- decide the tables to be joined --->
         <cfset isJoinRoads = (params.fc != "") OR (params.ft != "")>
-        <cfset isJoinCountParts = (params.catSum != "") OR (params.dirSum != "") OR (params.lnSum != "") OR (params.adt != "" OR True)>
-        <cfset isJoinCounts = isJoinCountParts OR (params.type != "") OR (params.frm != "") OR (params.to != "") OR (params.rec != "") OR (params.prj != "")>
         <cfquery name="cp" datasource="counts" result="main_query"><cfoutput>
             SELECT 
                 l.count_location_id, 
@@ -211,7 +214,7 @@
                 AND c.project_id = projects.project_id
                 AND c.count_id = cp.count_id<cfif params.tn NEQ "">
                 AND l.town_id = #params.tn#</cfif><cfif params.rt NEQ "">
-                AND auto_rte_number = '#params.rt#'</cfif><cfif params.st NEQ "">
+                AND l.auto_rte_number = '#params.rt#'</cfif><cfif params.st NEQ "">
                 <cfif params.stX NEQ "">AND l.streetname = UPPER('#params.st#')<cfelse>AND SOUNDEX(l.streetname) = SOUNDEX('#params.st#')</cfif></cfif><cfif params.fc NEQ "">
                 AND r.functionalclassification = #params.fc#</cfif><cfif params.ft NEQ "">
                 AND r.facilitytype = '#params.ft#'</cfif><cfif params.loc NEQ "">
@@ -271,7 +274,7 @@
         <cfquery name="estDataRows" dbtype="query">SELECT sum(est_data_rows) AS total_est_data_rows from cp</cfquery>
         
         <!--- OUTPUT the JSON --->
-		<cfoutput>{"geoExtent":[</cfoutput><cfoutput query="geoExtent">[#min_x#,#min_y#],[#max_x#,#max_y#]</cfoutput><cfoutput 
+		<cfoutput>"geoExtent":[</cfoutput><cfoutput query="geoExtent">[#min_x#,#min_y#],[#max_x#,#max_y#]</cfoutput><cfoutput 
         >],"townList":[</cfoutput><cfoutput query="townList">["#town#",#town_id#]<cfif currentRow NEQ RecordCount>,</cfif></cfoutput><cfoutput 
         >],"routeList":[</cfoutput><cfoutput query="routeList">"#auto_rte_number#"<cfif currentRow NEQ RecordCount>,</cfif></cfoutput><cfoutput
         >],"agencyList":[</cfoutput><cfoutput query="agencyList">{"agency":"#agency#","agency_id":#agency_id#}<cfif currentRow NEQ RecordCount>,</cfif></cfoutput><cfoutput
@@ -280,18 +283,123 @@
             currentRow NEQ RecordCount>,</cfif></cfoutput><cfoutput
         >],"projectList":[</cfoutput><cfoutput query="projectList">{"project_name":"#project_name#","project_description":"#project_description#","project_id":#project_id#}<cfif
             currentRow NEQ RecordCount>,</cfif></cfoutput><cfoutput
-        >],"dateRange":#SerializeJSON(dateRange)#,"data":#SerializeJSON(cp)#</cfoutput><cfoutput 
+        >],"dateRange":#SerializeJSON(dateRange)#,"count_parts":#SerializeJSON(cp)#</cfoutput><cfoutput 
           query="distinctTables">,"data_#data_table#":true</cfoutput><cfoutput 
           query="distinctTypes"><cfif distinctTypes.RecordCount EQ 1>,"distinctType":"#type#"</cfif></cfoutput><cfoutput
         >,"numCats":#distinctCats.RecordCount#,"numDirs":#distinctDirs.RecordCount#,"numLanes":#distinctLanes.RecordCount#</cfoutput><cfoutput 
-		query="estDataRows">,"estDataRows":#total_est_data_rows#</cfoutput><cfoutput>,"estRespFrac":#respFrac#<!---,"querySQL":"#JSStringFormat(main_query.sql)#"--->}</cfoutput>
-
+		query="estDataRows"><cfif params.mode EQ "both" AND total_est_data_rows LTE 1000><cfset params.mode = "data"></cfif>,"estDataRows":#total_est_data_rows#</cfoutput><cfoutput
+		>,"estRespFrac":#respFrac#<!---,"querySQL":"#JSStringFormat(main_query.sql)#"---></cfoutput>
+        
     </cfif>
     
     <!--- mode: get data; values: "both", "data", "zip" --->
-    <cfif params.mode EQ "both" OR params.mode EQ "data" OR params.mode EQ "zip">
+    <!--- 		The queries here are like the count_parts query above, except that they are joined to the data tables
+				If the data tables in the count_parts are already known from having run the count_parts query above,
+				then those are the control list for the loop. If the parameters specify the monthly or spannings data
+				table, then that is used as the control list. Otherwise, the control list is all data tables.--->
+    <cfif params.mode EQ "data" OR params.mode EQ "zip">
+		<cfif params.adt EQ "m"><cfset data_table_list = "monthly">
+        <cfelseif params.adt EQ "s"><cfset data_table_list = "spanning">
+        <cfelseif IsDefined("distinctTables")><cfset data_table_list = ""><cfoutput 
+            query="distinctTables"><cfset data_table_list = data_table_list & data_table><cfif currentRow NEQ RecordCount><cfset data_table_list = data_table_list & ","></cfif></cfoutput>
+        <cfelse><cfset data_table_list = "hourly,half_hourly,quarter_hourly,spanning,monthly"></cfif>
+        
+		<!--- OUTPUT the JSON --->
+        <cfif IsDefined("cp") OR IsDefined("countLocs")><cfoutput>,</cfoutput></cfif>
+        <cfoutput>"data_tables":{</cfoutput>
+
+        <cfoutput><cfloop index="data_table" delimiters="," list="#data_table_list#">
+
+			<cfset isJoinRoads = (params.fc != "") OR (params.ft != "")>
+            <cfquery name="data" datasource="counts" result="main_query">
+                SELECT 
+                    l.count_location_id, 
+                    l.streetname, 
+                    l.auto_rte_number, 
+                    l.alt_rte_number, 
+                    l.roadinventory_id, 
+                    l.description AS loc_desc, 
+                    l.town_id, 
+                    t.town,
+                    sde.st_x(l.shape) AS x,
+                    sde.st_y(l.shape) AS y,
+                    c.agency AS agency_id, 
+                    agency.org_name AS agency, 
+                    c.client AS client_id, 
+                    client.org_name AS client,
+                    c.type_id,
+                    c.project_id,
+                    c.date_first,
+                    c.date_last,
+                    types.type,
+                    types.description AS type_description,
+                    projects.name AS project_name,
+                    projects.description AS project_description,
+                    DECODE(cp.direction, 1, 'N', 2, 'S', 3, 'E', 4, 'W', '') AS dir,
+                    cp.lanes,
+                    DECODE(BITAND(cp.lanes,1),1,'0') || DECODE(BITAND(cp.lanes,2),2,'1') || DECODE(BITAND(cp.lanes,4),4,'2') || DECODE(BITAND(cp.lanes,8),8,'3') || 
+                        DECODE(BITAND(cp.lanes,16),16,'4') || DECODE(BITAND(cp.lanes,32),32,'5') || DECODE(BITAND(cp.lanes,64),64,'6') || DECODE(BITAND(cp.lanes,128),128,'7') || 
+                        DECODE(BITAND(cp.lanes,256),256,'8') AS lange_range,
+                    cp.category_code,
+                    cp.data_table,
+                    d.date_start,
+                    d.date_end,
+                    cp.description AS cp_desc,
+                    DECODE(c.type_id,4,EXTRACT(YEAR FROM cp.date_end) - EXTRACT(YEAR FROM cp.date_start) + 1,
+                        TRUNC(cp.date_end) - TRUNC(cp.date_start) + 1) AS est_data_rows,
+                    <cfif data_table EQ "spanning">d.span_count<cfelseif 
+					data_table EQ "monthly">d.january,d.february,d.march,d.april,d.may,d.june,d.july,d.august,d.september,d.october,d.november,d.december<cfelse
+                    ><cfif data_table EQ "hourly"><cfset interval = 60><cfelseif data_table EQ "half_hourly"><cfset interval = 30><cfelse><cfset interval = 15></cfif
+                    ><cfset start_time = DateAdd("n",interval,CreateDateTime(2000,1,1,0,0,0))><cfset end_time = CreateDateTime(2000,1,2,0,0,0)
+					><cfloop index="count_time" from="#start_time#" to="#end_time#" step="#CreateTimeSpan(0,0,interval,0)#"
+                    >#TimeFormat(count_time,"tt_h")#<cfif DatePart("n",count_time) NEQ 0>#TimeFormat(count_time,"_mm")#</cfif><cfif count_time NEQ end_time>,</cfif></cfloop
+                    ></cfif>
+                FROM 
+                    count_locations l, 
+                    towns_r_data t<cfif isJoinRoads>,
+                    mpodata.eot_roadinventory r</cfif>,
+                    counts c, types, projects, contacts agency, contacts client,
+                    count_parts cp,
+                    data_#data_table# d
+                WHERE 
+                    l.town_id = t.town_id<cfif isJoinRoads>
+                    AND l.roadinventory_id = r.roadinventory_id</cfif>
+                    AND l.count_location_id = c.count_loc_id
+                    AND c.agency = agency.contact_id
+                    AND c.client = client.contact_id
+                    AND c.type_id = types.type_id
+                    AND c.project_id = projects.project_id
+                    AND c.count_id = cp.count_id
+					AND cp.count_part_id = d.count_part_id<cfif params.tn NEQ "">
+                    AND l.town_id = #params.tn#</cfif><cfif params.rt NEQ "">
+                    AND l.auto_rte_number = '#params.rt#'</cfif><cfif params.st NEQ "">
+                    <cfif params.stX NEQ "">AND l.streetname = UPPER('#params.st#')<cfelse>AND SOUNDEX(l.streetname) = SOUNDEX('#params.st#')</cfif></cfif><cfif params.fc NEQ "">
+                    AND r.functionalclassification = #params.fc#</cfif><cfif params.ft NEQ "">
+                    AND r.facilitytype = '#params.ft#'</cfif><cfif params.loc NEQ "">
+                    AND l.count_location_id IN (#params.loc#)</cfif><cfif params.aoi NEQ "" OR (params.ext NEQ "" AND params.mapX NEQ "")>
+                    AND sde.st_intersects(l.shape, <cfif params.aoi NEQ "" AND params.mapX NEQ "">sde.st_intersection(</cfif><cfif
+                                                         params.mapX NEQ "">sde.st_geometry('#params.mapX#', 19)</cfif><cfif
+                                                         params.aoi NEQ "" AND params.mapX NEQ "">,</cfif><cfif
+                                                         params.aoi NEQ "">sde.st_geometry('#params.aoi#', 19)</cfif><cfif
+                                                         params.aoi NEQ "" AND params.mapX NEQ "">)</cfif>) = 1</cfif><cfif params.type NEQ "">
+                    AND c.type_id = #params.type#</cfif><cfif params.adt NEQ "">
+                    AND cp.data_table = '<cfif params.adt EQ "a">spanning<cfelse>monthly</cfif>'</cfif><cfif params.frm NEQ "">
+                    AND d.date_end > TO_DATE('#params.frm#','MM/DD/YYYY')</cfif><cfif params.to NEQ "">
+                    AND d.date_start < TO_DATE('#params.to#','MM/DD/YYYY')</cfif><cfif params.prj NEQ "">
+                    AND c.project_id = #params.prj#</cfif>
+            </cfquery>
+
+			<!--- OUTPUT the JSON --->
+            "#data_table#":#SerializeJSON(data)#<cfif ListLen(data_table_list) GT 1 AND data_table NEQ ListLast(data_table_list,",")>,</cfif>
+            
+		</cfloop></cfoutput> <!--- loop on all data tables implicated --->
+        
+        <cfoutput>}</cfoutput>
     </cfif>
     
 </cfif> <!--- end main branch tests on mode --->
+
+<!--- always generate the close brace of the JSON to be returned --->
+<cfoutput>}</cfoutput>
 
 </cfprocessingdirective>
