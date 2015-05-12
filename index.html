@@ -7,6 +7,8 @@
 <script src="/apps/libs/jqueryui/jquery-ui-1.10.4.custom/js/jquery-1.10.2.js"></script>
 <script src="/apps/libs/jqueryui/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.js"></script>
 <script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+<script src="wicket.js"></script>
+<script src="wicket-leaflet.js"></script>
 <script src="/apps/libs/proj4js/proj4js-2.2.1/dist/proj4.js"></script>
 <script src="/apps/libs/d3/d3-3.5.3/d3.min.js"></script>
 <script src="counts.js"></script>
@@ -26,10 +28,8 @@
                 <div id="queryMapControl"><div style="margin-top:40%;"></div>
                 </div><div id="queryLocControlsDiv">
                 	<h2>Where</h2>
-                    <input id="minXControl" name="minX" type="hidden">
-                    <input id="maxXControl" name="maxX" type="hidden">
-                    <input id="minYControl" name="minY" type="hidden">
-                    <input id="maxYControl" name="maxY" type="hidden">
+                    <input id="mapExtentControl" name="mapX" type="hidden">
+                    <input id="AOIControl" name="aoi" type="hidden">
                 	<label for="townControl">Town</label><select id="townControl" name="tn"><option value=""></option></select>
                     <label for="routeControl">Route</label><select id="routeControl" name="rt"><option value=""></option></select>
                     <label for="streetControl">Street</label><input id="streetControl" name="st" type="text">
@@ -59,7 +59,8 @@
                     	<option value="11">Simple ramp - tunnel</option>
                     </select>
                     <label for="locIDControl">Location/station ID</label><input id="locIDControl" name="loc" type="text">
-                    <input id="withinMapControl" name="ext" type="checkbox"><label for="withinMapControl">Search only within map extent</label>
+                    <input id="mapSyncControl" name="sync" type="checkbox" checked><label for="mapSyncControl">Zoom map to show resuls</label><br>
+                    <input id="withinMapControl" name="ext" type="checkbox"><label for="withinMapControl">Search only within visible map area</label>
                 </div>
             </div>
     
