@@ -54,6 +54,12 @@
 <!---   PROJECT --->
 <cfset respFrac = respFrac * IIf(params.prj EQ "1",0.85,IIf(params.prj EQ "2",0.13,IIf(params.prj EQ "3",0.02,IIf(params.prj NEQ "",0.01,1))))>
 
+<!---   AGENCY --->
+<cfset respFrac = respFrac * IIf(params.agcy EQ "1",0.95,IIf(params.agcy NEQ "",0.01,1))>
+
+<!---   CLIENT --->
+<cfset respFrac = respFrac * IIf(params.cl EQ "1",0.99,IIf(params.cl NEQ "",0.005,1))>
+
 <!--- set some useful variables --->
 <cfset oneMonth = CreateTimeSpan(30,0,0,0)>
 <cfset oneWeek = CreateTimeSpan(7,0,0,0)>
@@ -228,7 +234,9 @@
                 AND cp.data_table = '<cfif params.adt EQ "a">spanning<cfelse>monthly</cfif>'</cfif><cfif params.frm NEQ "">
                 AND date_end > TO_DATE('#params.frm#','MM/DD/YYYY')</cfif><cfif params.to NEQ "">
                 AND date_start < TO_DATE('#params.to#','MM/DD/YYYY')</cfif><cfif params.prj NEQ "">
-                AND c.project_id = #params.prj#</cfif>
+                AND c.project_id = #params.prj#</cfif><cfif params.agcy NEQ "">
+				AND c.agency = #params.agcy#</cfif><cfif params.cl NEQ "">
+				AND c.client = #params.cl#</cfif>
         </cfoutput></cfquery>
 
 	    <!--- QUERY-BASED DOMAINS --->
@@ -386,7 +394,9 @@
                     AND cp.data_table = '<cfif params.adt EQ "a">spanning<cfelse>monthly</cfif>'</cfif><cfif params.frm NEQ "">
                     AND d.date_end > TO_DATE('#params.frm#','MM/DD/YYYY')</cfif><cfif params.to NEQ "">
                     AND d.date_start < TO_DATE('#params.to#','MM/DD/YYYY')</cfif><cfif params.prj NEQ "">
-                    AND c.project_id = #params.prj#</cfif>
+                    AND c.project_id = #params.prj#</cfif><cfif params.agcy NEQ "">
+                    AND c.agency = #params.agcy#</cfif><cfif params.cl NEQ "">
+                    AND c.client = #params.cl#</cfif>
             </cfquery>
 
 			<!--- OUTPUT the JSON --->

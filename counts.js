@@ -173,6 +173,12 @@ CTPS.countsApp.queryOnControlChange = function() {
 				CTPS.countsApp.updateOptionList($('#projControl'), [""].concat(data.projectList), 
 												  function(d) { return d.project_name }, function(d) { return d.project_id }, 
 												  $('#projControl').val());
+				CTPS.countsApp.updateOptionList($('#agencyControl'), [""].concat(data.agencyList), 
+												  function(d) { return d.agency }, function(d) { return d.agency_id }, 
+												  $('#agencyControl').val());
+				CTPS.countsApp.updateOptionList($('#clientControl'), [""].concat(data.clientList), 
+												  function(d) { return d.client }, function(d) { return d.client_id }, 
+												  $('#clientControl').val());
 				if (typeof(data.numCats) !== 'undefined' && data.numCats > 1) $('#sumCatsDiv').show(); else $('#sumCatsDiv').hide();
 				if (typeof(data.numDirs) !== 'undefined' && data.numDirs > 1) $('#sumDirsDiv').show(); else $('#sumDirsDiv').hide();
 				if (typeof(data.numLanes) !== 'undefined' && data.numLanes > 1) $('#sumLanesDiv').show(); else $('#sumLanesDiv').hide();
