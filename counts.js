@@ -94,8 +94,10 @@ CTPS.countsApp.initSubmit = function() {
 											});
 	$('#fromDateControl').datepicker({"dateFormat": "mm/dd/yy", "numberOfMonths": 1, "changeMonth": true, "changeYear": true, "constrainInput": true,
 									 "onSelect": CTPS.countsApp.queryOnControlChange});
+	$('#fromDateControl').on('change', CTPS.countsApp.queryOnControlChange);
 	$('#toDateControl').datepicker({"dateFormat": "mm/dd/yy", "numberOfMonths": 1, "changeMonth": true, "changeYear": true, "constrainInput": true,
 								   "onSelect": CTPS.countsApp.queryOnControlChange});
+	$('#toDateControl').on('change', CTPS.countsApp.queryOnControlChange);
 	$('.nestedCheckboxes').on('change', CTPS.countsApp.toggleNestedCheckboxes);
 	$('#queryTimeDiv input[type=radio]').on('change', CTPS.countsApp.queryOnControlChange);
 	$('#queryProjDiv select').on('change', CTPS.countsApp.queryOnControlChange);
@@ -168,11 +170,45 @@ CTPS.countsApp.queryOnControlChange = function() {
 				CTPS.countsApp.updateOptionList($('#typeControl'),[""].concat(data.typeList), 
 												function(d) { return d.type }, function(d) { return d.type_id }, 
 												$('#typeControl').val());
-				$('#fromDateControl').val(data.dateRange.DATA.length > 0 ? $.datepicker.formatDate('mm/dd/yy',new Date(data.dateRange.DATA[0][0])) : '');
-				$('#toDateControl').val(data.dateRange.DATA.length > 0 ? $.datepicker.formatDate('mm/dd/yy',new Date(data.dateRange.DATA[0][1])) : '');
+				if (data.dateRange.DATA.length > 0) {
+					minDate = new Date(data.dateRange.DATA[0][0]);
+					oldFromDate = $('#fromDateControl').datepicker("getDate");
+					maxDate = new Date(data.dateRange.DATA[0][1]);
+					oldToDate = $('#toDateControl').datepicker("getDate");
+					if (!$('#fromDateControl').datepicker("option", "minDate")) {
+						$('#fromDateControl').datepicker("option", "minDate", minDate);
+						$('#fromDateControl').datepicker("option", "maxDate", maxDate);
+						$('#fromDateControl').datepicker("option", "yearRange", $.datepicker.formatDate("yy", minDate) + ":" + $.datepicker.formatDate("yy", maxDate));
+						$('#toDateControl').datepicker("option", "minDate", minDate);
+						$('#toDateControl').datepicker("option", "maxDate", maxDate);
+						$('#toDateControl').datepicker("option", "yearRange", $.datepicker.formatDate("yy", minDate) + ":" + $.datepicker.formatDate("yy", maxDate));
+					}
+					$('#fromDateControl').attr("placeholder", $.datepicker.formatDate('mm/dd/yy', minDate));
+					if (oldFromDate) {
+						$('#fromDateControl').datepicker("option", "defaultDate", (oldFromDate > minDate ? oldFromDate : minDate));
+						$('#fromDateControl').val($.datepicker.formatDate('mm/dd/yy', oldFromDate));
+					} else {
+						$('#fromDateControl').datepicker("option", "defaultDate", minDate);
+					}
+					$('#toDateControl').attr("placeholder", $.datepicker.formatDate('mm/dd/yy', maxDate));
+					if (oldToDate) {
+						$('#toDateControl').datepicker("option", "defaultDate", (oldToDate < maxDate ? oldToDate : maxDate));
+						$('#toDateControl').val($.datepicker.formatDate('mm/dd/yy', oldToDate));
+					} else {
+						$('#toDateControl').datepicker("option", "defaultDate", maxDate);
+					}
+				}
+				// $('#fromDateControl').val(data.dateRange.DATA.length > 0 ? $.datepicker.formatDate('mm/dd/yy',new Date(data.dateRange.DATA[0][0])) : '');
+				// $('#toDateControl').val(data.dateRange.DATA.length > 0 ? $.datepicker.formatDate('mm/dd/yy',new Date(data.dateRange.DATA[0][1])) : '');
 				CTPS.countsApp.updateOptionList($('#projControl'), [""].concat(data.projectList), 
 												  function(d) { return d.project_name }, function(d) { return d.project_id }, 
 												  $('#projControl').val());
+				CTPS.countsApp.updateOptionList($('#agencyControl'), [""].concat(data.agencyList), 
+												  function(d) { return d.agency }, function(d) { return d.agency_id }, 
+												  $('#agencyControl').val());
+				CTPS.countsApp.updateOptionList($('#clientControl'), [""].concat(data.clientList), 
+												  function(d) { return d.client }, function(d) { return d.client_id }, 
+												  $('#clientControl').val());
 				if (typeof(data.numCats) !== 'undefined' && data.numCats > 1) $('#sumCatsDiv').show(); else $('#sumCatsDiv').hide();
 				if (typeof(data.numDirs) !== 'undefined' && data.numDirs > 1) $('#sumDirsDiv').show(); else $('#sumDirsDiv').hide();
 				if (typeof(data.numLanes) !== 'undefined' && data.numLanes > 1) $('#sumLanesDiv').show(); else $('#sumLanesDiv').hide();
