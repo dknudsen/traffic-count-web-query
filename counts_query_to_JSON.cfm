@@ -45,14 +45,23 @@
 <cfset respFrac = respFrac * IIf(params.type EQ "1" OR params.type EQ "2",0.35,IIf(params.type EQ "3" OR params.type EQ "4",0.15,IIf(params.type NEQ "",0.01,1)))>
 <!---   DATA TABLE RESTRICTION --->
 <cfset respFrac = respFrac * IIf(params.adt EQ "m",0.02,1) * IIf(params.aggr EQ "q",0.5,1)>
-<!---   DATE RANGE --->
-<cfset respFrac = respFrac * DateDiff("d",IIf(params.frm EQ "","CreateDate(1962,1,1)","ParseDateTime(params.frm)"),
-										  IIf(params.to EQ "","Now()","ParseDateTime(params.to)")) / DateDiff("d",CreateDate(1962,1,1),Now())>
+<!---   DATE --->
+	<!---   DATE RANGE --->
+	<cfset respFrac = respFrac * DateDiff("d",IIf(params.frm EQ "","CreateDate(1962,1,1)","ParseDateTime(params.frm)"),
+											  IIf(params.to EQ "","Now()","ParseDateTime(params.to)")) / DateDiff("d",CreateDate(1962,1,1),Now())>
+    <!---   MOST RECENT ONLY --->
+	<cfset respFrac = respFrac * IIf(params.rec NEQ "",0.4,1)>
 <!---   MONTH RESTRICTION --->
 <cfset respFrac = respFrac * IIf(params.mos EQ "",
 								 Len(params.j & params.f & params.mar & params.apr & params.may & params.jun & params.jul & params.aug & params.s & params.o & params.n & params.d)/24,1)>
 <!---   PROJECT --->
 <cfset respFrac = respFrac * IIf(params.prj EQ "1",0.85,IIf(params.prj EQ "2",0.13,IIf(params.prj EQ "3",0.02,IIf(params.prj NEQ "",0.01,1))))>
+
+<!---   AGENCY --->
+<cfset respFrac = respFrac * IIf(params.agcy EQ "1",0.95,IIf(params.agcy NEQ "",0.01,1))>
+
+<!---   CLIENT --->
+<cfset respFrac = respFrac * IIf(params.cl EQ "1",0.99,IIf(params.cl NEQ "",0.005,1))>
 
 <!--- set some useful variables --->
 <cfset oneMonth = CreateTimeSpan(30,0,0,0)>
@@ -227,8 +236,11 @@
                 AND c.type_id = #params.type#</cfif><cfif params.adt NEQ "">
                 AND cp.data_table = '<cfif params.adt EQ "a">spanning<cfelse>monthly</cfif>'</cfif><cfif params.frm NEQ "">
                 AND date_end > TO_DATE('#params.frm#','MM/DD/YYYY')</cfif><cfif params.to NEQ "">
-                AND date_start < TO_DATE('#params.to#','MM/DD/YYYY')</cfif><cfif params.prj NEQ "">
-                AND c.project_id = #params.prj#</cfif>
+                AND date_start < TO_DATE('#params.to#','MM/DD/YYYY')</cfif><cfif params.rec NEQ "">
+                AND cp.date_end = c.date_last</cfif><cfif params.prj NEQ "">
+                AND c.project_id = #params.prj#</cfif><cfif params.agcy NEQ "">
+				AND c.agency = #params.agcy#</cfif><cfif params.cl NEQ "">
+				AND c.client = #params.cl#</cfif>
         </cfoutput></cfquery>
 
 	    <!--- QUERY-BASED DOMAINS --->
@@ -295,18 +307,23 @@
     <!--- mode: get data; values: "both", "data", "zip" --->
     <!--- 		The queries here are like the count_parts query above, except that they are joined to the data tables
 				If the data tables in the count_parts are already known from having run the count_parts query above,
-				then those are the control list for the loop. If the parameters specify the monthly or spannings data
+				then those are the control list for the loop. If the parameters specify the monthly or spanning data
 				table, then that is used as the control list. Otherwise, the control list is all data tables.--->
     <cfif params.mode EQ "data" OR params.mode EQ "zip">
 		<cfif params.adt EQ "m"><cfset data_table_list = "monthly">
-        <cfelseif params.adt EQ "s"><cfset data_table_list = "spanning">
+        <cfelseif params.adt EQ "a"><cfset data_table_list = "spanning">
         <cfelseif IsDefined("distinctTables")><cfset data_table_list = ""><cfoutput 
             query="distinctTables"><cfset data_table_list = data_table_list & data_table><cfif currentRow NEQ RecordCount><cfset data_table_list = data_table_list & ","></cfif></cfoutput>
         <cfelse><cfset data_table_list = "hourly,half_hourly,quarter_hourly,spanning,monthly"></cfif>
         
 		<!--- OUTPUT the JSON --->
-        <cfif IsDefined("cp") OR IsDefined("countLocs")><cfoutput>,</cfoutput></cfif>
-        <cfoutput>"data_tables":{</cfoutput>
+		<cfif IsDefined("cp") OR IsDefined("countLocs")><cfoutput>,</cfoutput></cfif>
+        <cfif params.mode NEQ "zip">
+            <cfoutput>"data_tables":{</cfoutput>
+        <cfelse>
+        	<!--- Note: currently dumping temp output to a subdirectory of the application, but it could be set to anywhere that can be determined to be relative to application directory --->
+			<cfset zipFile = GetDirectoryFromPath(GetCurrentTemplatePath()) & "\temp\counts_" & DateFormat(Now(),"yyyymmdd") & TimeFormat(Now(),"HHmmssl") & ".zip">
+        </cfif>
 
         <cfoutput><cfloop index="data_table" delimiters="," list="#data_table_list#">
 
@@ -350,9 +367,9 @@
                     <cfif data_table EQ "spanning">d.span_count<cfelseif 
 					data_table EQ "monthly">d.january,d.february,d.march,d.april,d.may,d.june,d.july,d.august,d.september,d.october,d.november,d.december<cfelse
                     ><cfif data_table EQ "hourly"><cfset interval = 60><cfelseif data_table EQ "half_hourly"><cfset interval = 30><cfelse><cfset interval = 15></cfif
-                    ><cfset start_time = DateAdd("n",interval,CreateDateTime(2000,1,1,0,0,0))><cfset end_time = CreateDateTime(2000,1,2,0,0,0)
+                    ><cfset start_time = DateAdd("n",interval,CreateDateTime(2000,1,1,0,0,0))><cfset end_time = CreateDateTime(2000,1,2,0,0,1)
 					><cfloop index="count_time" from="#start_time#" to="#end_time#" step="#CreateTimeSpan(0,0,interval,0)#"
-                    >#TimeFormat(count_time,"tt_h")#<cfif DatePart("n",count_time) NEQ 0>#TimeFormat(count_time,"_mm")#</cfif><cfif count_time NEQ end_time>,</cfif></cfloop
+                    >#TimeFormat(count_time,"tt_h")#<cfif DatePart("n",count_time) NEQ 0>#TimeFormat(count_time,"_mm")#</cfif><cfif end_time - count_time GT 0.0003>,</cfif></cfloop
                     ></cfif>
                 FROM 
                     count_locations l, 
@@ -385,16 +402,64 @@
                     AND c.type_id = #params.type#</cfif><cfif params.adt NEQ "">
                     AND cp.data_table = '<cfif params.adt EQ "a">spanning<cfelse>monthly</cfif>'</cfif><cfif params.frm NEQ "">
                     AND d.date_end > TO_DATE('#params.frm#','MM/DD/YYYY')</cfif><cfif params.to NEQ "">
-                    AND d.date_start < TO_DATE('#params.to#','MM/DD/YYYY')</cfif><cfif params.prj NEQ "">
-                    AND c.project_id = #params.prj#</cfif>
+                    AND d.date_start < TO_DATE('#params.to#','MM/DD/YYYY')</cfif><cfif params.rec NEQ "">
+	                AND cp.date_end = c.date_last</cfif><cfif params.prj NEQ "">
+                    AND c.project_id = #params.prj#</cfif><cfif params.agcy NEQ "">
+                    AND c.agency = #params.agcy#</cfif><cfif params.cl NEQ "">
+                    AND c.client = #params.cl#</cfif>
             </cfquery>
 
 			<!--- OUTPUT the JSON --->
-            "#data_table#":#SerializeJSON(data)#<cfif ListLen(data_table_list) GT 1 AND data_table NEQ ListLast(data_table_list,",")>,</cfif>
+            <cfif params.mode NEQ "zip">
+	            "#data_table#":#SerializeJSON(data)#<cfif ListLen(data_table_list) GT 1 AND data_table NEQ ListLast(data_table_list,",")>,</cfif>
+            <cfelseif data.RecordCount GT 0>
+	        	<cfset queryMetadata = getMetaData(data)>
+                <cfset fileoutput = "">
+                <cfloop index="colindex" from="1" to="#ArrayLen(queryMetadata)#"><cfif 
+					colindex LT ArrayLen(queryMetadata)><cfset 
+						fileoutput = fileoutput & queryMetadata[colindex].name & ","><cfelse><cfset 
+						fileoutput = fileoutput & queryMetadata[colindex].name & Chr(13)></cfif 
+                    ></cfloop 
+                >
+				<cfoutput query="data"><cfloop 
+                	index="colindex" from="1" to="#ArrayLen(queryMetadata)#"><cfif 
+						queryMetadata[colindex].TypeName NEQ "NUMERIC"><cfset 
+							fileoutput = fileoutput & """" & data[queryMetadata[colindex].Name] & """"><cfelse><cfset 
+							fileoutput = fileoutput & data[queryMetadata[colindex].Name]></cfif 
+                        ><cfif colindex NEQ ArrayLen(queryMetadata)><cfset 
+							fileoutput = fileoutput & ","><cfelse><cfset 
+							fileoutput = fileoutput & Chr(13)></cfif 
+                        >
+                    </cfloop
+                ></cfoutput>
+                <cfif fileoutput NEQ "">
+	                <cfzip file="#zipFile#"><cfzipparam content="#fileoutput#" entrypath="#data_table#.csv"></cfzip>
+                </cfif>
+            </cfif>
             
 		</cfloop></cfoutput> <!--- loop on all data tables implicated --->
         
-        <cfoutput>}</cfoutput>
+        <cfif params.mode NEQ "zip">
+	        <cfoutput>}</cfoutput>
+        <cfelse>
+        	<!--- attempt to build a URL for the output file that is relative to the application directory --->
+        	<cfset relZipURL = Replace(zipFile,'\','/','all')>
+            <cfset relZipURLPart = 1>
+        	<cfloop index="pathPart" from="1" to="#(ListLen(GetCurrentTemplatePath(),'\/') - 1)#">
+            	<cfif relZipURLPart NEQ ListLen(relZipURL,'/')>
+                	<cfif ListGetAt(GetCurrentTemplatePath(),pathPart,'\/') EQ ListGetAt(relZipURL,relZipURLPart,'/')>
+                    	<cfset relZipURL = ListDeleteAt(relZipURL,relZipURLPart,'/')>
+                    <cfelse>
+                    	<cfset relZipURL = ListPrepend(relZipURL,'..','/')>
+                        <cfset relZipURLPart = relZipURLPart + 1>
+                    </cfif>
+                <cfelse>
+					<cfset relZipURL = ListPrepend(relZipURL,'..','/')>
+                    <cfset relZipURLPart = relZipURLPart + 1>
+                </cfif>
+            </cfloop>
+        	<cfoutput>"zipFile":"#JSStringFormat(relZipURL)#"</cfoutput>
+        </cfif>
     </cfif>
     
 </cfif> <!--- end main branch tests on mode --->
