@@ -6,7 +6,8 @@
 <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
 <script src="/apps/libs/jqueryui/jquery-ui-1.10.4.custom/js/jquery-1.10.2.js"></script>
 <script src="/apps/libs/jqueryui/jquery-ui-1.10.4.custom/js/jquery-ui-1.10.4.custom.js"></script>
-<script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+<!--<script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>-->
+<script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet-src.js"></script>
 <script src="wicket.js"></script>
 <script src="wicket-leaflet.js"></script>
 <script src="/apps/libs/proj4js/proj4js-2.2.1/dist/proj4.js"></script>
@@ -23,6 +24,7 @@
     	<form id="theForm" name="theForm" method="post" action="query_count_parts.cfm" >
         
         	<input id="modeControl" name="mode" type="hidden" value="init">
+            <input id="respFracThreshold" name="erft" type="hidden">
     
             <div id="queryGeoDiv">
                 <div id="queryMapControl"><div style="margin-top:40%;"></div>
@@ -114,8 +116,13 @@
                     <input id="avgDaysByMonthControl" name="avgM" type="checkbox"><label for="avgDaysByMonthControl">By month</label>
                 </div>
                 <div id="aggregationIntervalDiv">
-                	<input id="hourlyControl" name="aggr" type="radio" value="h" checked><label for="hourlyControl">Aggregate to hours</label>
-                    <input id="qtrHourlyControl" name="aggr" type="radio" value="q"><label for="qtrHourlyControl">Quarter-hourly data only</label>
+                	Count interval:<br>
+                	<input id="anyIntControl" name="intSel" type="radio" value="0" checked><label for="anyIntControl">Any</label>
+                	<input id="hourlyControl" name="intSel" type="radio" value="60"><label for="hourlyControl">1 hour</label>
+                	<input id="halfHourlyControl" name="intSel" type="radio" value="30"><label for="halfHourlyControl">30 min.</label>
+                    <input id="qtrHourlyControl" name="intSel" type="radio" value="15"><label for="qtrHourlyControl">15 min.</label>
+                	<input id="aggr" name="aggr" type="checkbox"><label for="aggr">Aggregate smaller interval data</label><br>
+                    <input id="intLimit" name="intLimit" type="checkbox"><label for="intLimit">Omit larger interval data</label><br>
                 </div>
             </div><div id="queryProjDiv">
             	<h2>Who</h2>
@@ -130,7 +137,7 @@
                 </div>
                 <div id="treeControlDiv"></div>
                 <div id="queryFinalDataDiv">
-                	<button>Show all</button><button>Download all</button>
+                	<button disabled>Show all</button><button id="download" disabled>Create download</button>
                 </div>
             </div>
     

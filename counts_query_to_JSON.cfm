@@ -15,13 +15,16 @@
 				   "frm,to,rec," &
 				   "days,sun,mon,tue,wed,thu,fri,sat," &
 				   "mos,j,f,mar,apr,may,jun,jul,aug,s,o,n,d," &
-				   "avg,avgD,avgM,aggr," &
-				   "prj,agcy,cl">
+				   "avg,avgD,avgM,aggr,intLimit,intSel," &
+				   "prj,agcy,cl," &
+				   "erft">
 <cfloop index="p" delimiters="," list=#paramList#>
 	<cfif NOT IsDefined("params." & p)><cfset params[p] = ""></cfif>
 </cfloop>
 <!--- correct inconsistent params --->
-<cfif params.mode NEQ "4"><cfset params.adt = ""></cfif>
+<cfif params.type NEQ "4"><cfset params.adt = ""></cfif>
+<!--- set an estimated response fraction threshold if not provided in parameters --->
+<cfif params.erft EQ ""><cfset params.erft = 0.01></cfif>
 
 <!--- estimate size of response recordset --->
 <!---   TOWN, ROUTE, STREET --->
@@ -44,7 +47,7 @@
 <!---   COUNT TYPE --->
 <cfset respFrac = respFrac * IIf(params.type EQ "1" OR params.type EQ "2",0.35,IIf(params.type EQ "3" OR params.type EQ "4",0.15,IIf(params.type NEQ "",0.01,1)))>
 <!---   DATA TABLE RESTRICTION --->
-<cfset respFrac = respFrac * IIf(params.adt EQ "m",0.02,1) * IIf(params.aggr EQ "q",0.5,1)>
+<cfset respFrac = respFrac * IIf(params.adt EQ "m",0.02,1) * IIf(params.intLimit EQ "on" AND params.intSel EQ "q",0.5,1)>
 <!---   DATE --->
 	<!---   DATE RANGE --->
 	<cfset respFrac = respFrac * DateDiff("d",IIf(params.frm EQ "","CreateDate(1962,1,1)","ParseDateTime(params.frm)"),
@@ -71,10 +74,16 @@
 <cfoutput>{</cfoutput>
 
 <!--- MAIN BRANCH -- page runs different queries based upon the mode parameter --->
-<!--- mode: get domains of count database; values: "init" or empty --->
-<cfif params.mode EQ "init" OR params.mode EQ "" OR respFrac GT 0.01>
 
-    <!--- LOCATION-BASED DOMAINS --->
+<cfif params.mode EQ "init" OR params.mode EQ "" OR respFrac GT params.erft>
+<!--- MODE: get domains of count database; values: "init" or empty 
+			As long as the fraction of the entire database estimated to be returned using the provided search parameters 
+			is greater than some cut-off, don't bother performing a real query using those parameters, and just return
+			parameter domains based upon full scans of single tables, i.e., town and route lists from those found in the
+			count_locations table; agency, client, type, and project lists and date ranges from values found in the counts
+			table, etc., etc. --->
+
+    <!--- DOMAINS BASED on ALL LOCATIONS --->
     <cfquery name="countLocs" datasource="counts" cachedwithin="#oneWeek#">
     	SELECT auto_rte_number, l.town_id, t.town, sde.st_x(shape) AS x, sde.st_y(shape) AS y 
         FROM count_locations l, towns_r_data t 
@@ -92,7 +101,7 @@
             GROUP BY auto_rte_number
         </cfquery>
     
-	<!--- COUNT-BASED DOMAINS --->
+	<!--- DOMAINS BASED on ALL COUNTS --->
     <cfquery name="counts" datasource="counts" result="main_query" cachedwithin="#oneWeek#">
     	SELECT 
         	agency AS agency_id, agency.org_name AS agency, client AS client_id, client.org_name AS client,
@@ -131,7 +140,7 @@
 		<!--- DATES --->
         <cfquery name="dateRange" dbtype="query">SELECT min(date_first) AS min_date, max(date_last) AS max_date FROM counts</cfquery>
     
-    <!--- DATA-TABLE-BASED DOMAINS --->
+    <!--- DOMAINS from FULL DATA TABLES --->
     	<!--- COUNT_PARTS --->
         <cfquery name="cpRows" datasource="counts" cachedwithin="#oneMonth#">SELECT count(*) AS cpRows from count_parts</cfquery>
         <!--- DATA_HOURLY --->
@@ -161,13 +170,20 @@
 		query="qhRows">"data_quarter_hourly":#qhRows#,</cfoutput><cfoutput
 		query="mRows">"data_monthly":#mRows#,</cfoutput><cfoutput
 		query="sRows">"data_spanning":#sRows#</cfoutput><cfoutput
-	>},"estRespFrac":#respFrac#,"querySQL":"#JSStringFormat(main_query.sql)#"</cfoutput>
+	>},"estRespFrac":#respFrac#,"estRespFracThreshold":#erft#,"querySQL":"#JSStringFormat(main_query.sql)#"</cfoutput>
 
-<!--- mode: run parameterized queries of count database; values: not "init" or empty --->
+
 <cfelse>
+<!--- MODE: run parameterized queries of count database; values: not "init" or empty and respFrac <= threshold
+			 Here the proportion of the whole database estimated to be returned using the provided parameters
+			 in a query is less than some cut-off, so a query will be run joining all the tables necessary
+			 to incorporate all the provided parameters, but still to be decided is whether to join 
+			 count data tables to return count data as well, or merely return new domains for the parameters --->
 
-	<!--- mode: get count_parts; values: "cp", "both" --->
-	<cfif (params.mode EQ "cp" OR params.mode EQ "both") AND respFrac LTE 0.01>
+	<cfif (params.mode EQ "cp" OR params.mode EQ "both") AND respFrac LTE params.erft>
+	<!--- mode: get count_parts; values: "cp", "both" 
+				Unless a zip file is being requested, then we always want to run a single query joining all tables
+				except the count data tables, in order to find domains for all possible query parameters --->
 
 		<!--- decide the tables to be joined --->
         <cfset isJoinRoads = (params.fc != "") OR (params.ft != "")>
@@ -209,7 +225,7 @@
                     TRUNC(cp.date_end) - TRUNC(cp.date_start) + 1) AS est_data_rows
             FROM 
                 count_locations l, 
-                towns_r_data t<cfif isJoinRoads>,
+                towns_r_data t<cfif isJoinRoads>,	<!--- only join the Road Inventory if a provided query parameter requires it, since it's an expensive join --->
                 mpodata.eot_roadinventory r</cfif>,
                 counts c, types, projects, contacts agency, contacts client,
                 count_parts cp
@@ -299,26 +315,29 @@
           query="distinctTables">,"data_#data_table#":true</cfoutput><cfoutput 
           query="distinctTypes"><cfif distinctTypes.RecordCount EQ 1>,"distinctType":"#type#"</cfif></cfoutput><cfoutput
         >,"numCats":#distinctCats.RecordCount#,"numDirs":#distinctDirs.RecordCount#,"numLanes":#distinctLanes.RecordCount#</cfoutput><cfoutput 
-		query="estDataRows"><cfif params.mode EQ "both" AND total_est_data_rows LTE 1000><cfset params.mode = "data"></cfif>,"estDataRows":#total_est_data_rows#</cfoutput><cfoutput
-		>,"estRespFrac":#respFrac#<!---,"querySQL":"#JSStringFormat(main_query.sql)#"---></cfoutput>
+		query="estDataRows"><cfif params.mode EQ "both" AND total_est_data_rows LTE 10000><cfset params.mode = "data"></cfif>,"estDataRows":#total_est_data_rows#</cfoutput><cfoutput
+		>,"estRespFrac":#respFrac#,"estRespFracThreshold":#erft#<!---,"querySQL":"#JSStringFormat(main_query.sql)#"---></cfoutput>
         
     </cfif>
     
-    <!--- mode: get data; values: "both", "data", "zip" --->
-    <!--- 		The queries here are like the count_parts query above, except that they are joined to the data tables
+    <cfif params.mode EQ "data" OR params.mode EQ "zip">
+    <!--- mode: get data; values: "both", "data", "zip"
+				The queries here are like the count_parts query above, except that they are joined to the data tables
 				If the data tables in the count_parts are already known from having run the count_parts query above,
 				then those are the control list for the loop. If the parameters specify the monthly or spanning data
 				table, then that is used as the control list. Otherwise, the control list is all data tables.--->
-    <cfif params.mode EQ "data" OR params.mode EQ "zip">
 		<cfif params.adt EQ "m"><cfset data_table_list = "monthly">
         <cfelseif params.adt EQ "a"><cfset data_table_list = "spanning">
-        <cfelseif IsDefined("distinctTables")><cfset data_table_list = ""><cfoutput 
-            query="distinctTables"><cfset data_table_list = data_table_list & data_table><cfif currentRow NEQ RecordCount><cfset data_table_list = data_table_list & ","></cfif></cfoutput>
+        <cfelseif IsDefined("distinctTables")><cfset data_table_list = "">
+        	<!--- Construct the list of data tables to query, but omit any that have a coarser time scale if a parameter requires finer time scale --->
+			<cfoutput query="distinctTables"><cfif params.intLimit NEQ "on" OR 
+			IIf(data_table EQ 'quarter_hourly',15,IIf(data_table EQ 'half_hourly', 30, 60)) LTE params.intSel><cfset data_table_list = data_table_list & data_table><cfif 
+			currentRow NEQ RecordCount><cfset data_table_list = data_table_list & ","></cfif></cfif></cfoutput>
         <cfelse><cfset data_table_list = "hourly,half_hourly,quarter_hourly,spanning,monthly"></cfif>
         
 		<!--- OUTPUT the JSON --->
 		<cfif IsDefined("cp") OR IsDefined("countLocs")><cfoutput>,</cfoutput></cfif>
-        <cfif params.mode NEQ "zip">
+        <cfif params.mode NEQ "zip">	<!--- if we are not generating a zip file, output the JSON element for the data table query results object --->
             <cfoutput>"data_tables":{</cfoutput>
         <cfelse>
         	<!--- Note: currently dumping temp output to a subdirectory of the application, but it could be set to anywhere that can be determined to be relative to application directory --->
@@ -351,7 +370,7 @@
                     types.type,
                     types.description AS type_description,
                     projects.name AS project_name,
-                    projects.description AS project_description,
+                    <!---projects.description AS project_description,--->
                     DECODE(cp.direction, 1, 'N', 2, 'S', 3, 'E', 4, 'W', '') AS dir,
                     cp.lanes,
                     DECODE(BITAND(cp.lanes,1),1,'0') || DECODE(BITAND(cp.lanes,2),2,'1') || DECODE(BITAND(cp.lanes,4),4,'2') || DECODE(BITAND(cp.lanes,8),8,'3') || 
@@ -364,16 +383,21 @@
                     cp.description AS cp_desc,
                     DECODE(c.type_id,4,EXTRACT(YEAR FROM cp.date_end) - EXTRACT(YEAR FROM cp.date_start) + 1,
                         TRUNC(cp.date_end) - TRUNC(cp.date_start) + 1) AS est_data_rows,
+                    <!--- Specify the actual data columns with hard-coded lists for monthly and spanning tables and using a loop for hourly, half-hourly, and quarter-hourly tables.
+						  If time interval aggregation has been specified, generate calculated roll-up data columns with aliases within the loop. --->
                     <cfif data_table EQ "spanning">d.span_count<cfelseif 
 					data_table EQ "monthly">d.january,d.february,d.march,d.april,d.may,d.june,d.july,d.august,d.september,d.october,d.november,d.december<cfelse
                     ><cfif data_table EQ "hourly"><cfset interval = 60><cfelseif data_table EQ "half_hourly"><cfset interval = 30><cfelse><cfset interval = 15></cfif
                     ><cfset start_time = DateAdd("n",interval,CreateDateTime(2000,1,1,0,0,0))><cfset end_time = CreateDateTime(2000,1,2,0,0,1)
 					><cfloop index="count_time" from="#start_time#" to="#end_time#" step="#CreateTimeSpan(0,0,interval,0)#"
-                    >#TimeFormat(count_time,"tt_h")#<cfif DatePart("n",count_time) NEQ 0>#TimeFormat(count_time,"_mm")#</cfif><cfif end_time - count_time GT 0.0003>,</cfif></cfloop
+                    >#TimeFormat(count_time,"tt_h")#<cfif DatePart("n",count_time) NEQ 0>#TimeFormat(count_time,"_mm")#</cfif><cfif params.aggr EQ "on" AND interval LT params.intSel
+					><cfif DatePart("n",count_time) MOD params.intSel NEQ 0>+<cfelse> AS #TimeFormat(count_time,"tt_h")#<cfif DatePart("n",count_time) NEQ 0
+					>#TimeFormat(count_time,"_mm")#</cfif></cfif></cfif><cfif end_time - count_time GT 0.0003 AND 
+					(params.aggr NEQ "on" OR interval GTE params.intSel OR DatePart("n",count_time) MOD params.intSel EQ 0)>,</cfif></cfloop
                     ></cfif>
                 FROM 
                     count_locations l, 
-                    towns_r_data t<cfif isJoinRoads>,
+                    towns_r_data t<cfif isJoinRoads>,	<!--- only join the Road Inventory if a provided query parameter requires it, since it's an expensive join --->
                     mpodata.eot_roadinventory r</cfif>,
                     counts c, types, projects, contacts agency, contacts client,
                     count_parts cp,
@@ -410,17 +434,19 @@
             </cfquery>
 
 			<!--- OUTPUT the JSON --->
-            <cfif params.mode NEQ "zip">
+            <cfif params.mode NEQ "zip">	<!--- if data, not a zip file, is to be returned, generate JSON from the data --->
 	            "#data_table#":#SerializeJSON(data)#<cfif ListLen(data_table_list) GT 1 AND data_table NEQ ListLast(data_table_list,",")>,</cfif>
-            <cfelseif data.RecordCount GT 0>
-	        	<cfset queryMetadata = getMetaData(data)>
+            <cfelseif data.RecordCount GT 0><!--- if a zip file is to be returned, generate CSV to be appended to zip file --->
+	        	<cfset queryMetadata = getMetaData(data)>	<!--- get query's column names and data types --->
                 <cfset fileoutput = "">
+                <!--- write out the query column names in the first row of the output variable --->
                 <cfloop index="colindex" from="1" to="#ArrayLen(queryMetadata)#"><cfif 
 					colindex LT ArrayLen(queryMetadata)><cfset 
 						fileoutput = fileoutput & queryMetadata[colindex].name & ","><cfelse><cfset 
 						fileoutput = fileoutput & queryMetadata[colindex].name & Chr(13)></cfif 
                     ></cfloop 
                 >
+                <!--- write out the data rows of the query to the output variable, making sure to quote string values for the CSV format --->
 				<cfoutput query="data"><cfloop 
                 	index="colindex" from="1" to="#ArrayLen(queryMetadata)#"><cfif 
 						queryMetadata[colindex].TypeName NEQ "NUMERIC"><cfset 
@@ -432,16 +458,16 @@
                         >
                     </cfloop
                 ></cfoutput>
-                <cfif fileoutput NEQ "">
+                <cfif fileoutput NEQ "">	<!--- only append to the zip file if there any query rows --->
 	                <cfzip file="#zipFile#"><cfzipparam content="#fileoutput#" entrypath="#data_table#.csv"></cfzip>
                 </cfif>
             </cfif>
             
 		</cfloop></cfoutput> <!--- loop on all data tables implicated --->
         
-        <cfif params.mode NEQ "zip">
+        <cfif params.mode NEQ "zip">	<!--- if we are not generating a zip file, output the closing JSON brace for the data table query results object --->
 	        <cfoutput>}</cfoutput>
-        <cfelse>
+        <cfelse>	<!--- if we are generating a zip file, the only JSON element returned will be an element providing the URL of the zip file --->
         	<!--- attempt to build a URL for the output file that is relative to the application directory --->
         	<cfset relZipURL = Replace(zipFile,'\','/','all')>
             <cfset relZipURLPart = 1>

@@ -3,6 +3,7 @@ var CTPS = {};
 CTPS.countsApp = {};
 CTPS.countsApp.drawVertices = [];
 CTPS.countsApp.aoi = null;
+CTPS.countsApp.queryThreshold = 0.01;
 
 CTPS.countsApp.initSubmit = function() {
 	// init the map control
@@ -81,6 +82,7 @@ CTPS.countsApp.initSubmit = function() {
 	CTPS.countsApp.map.fireEvent('moveend');	// call the handler to populate the map extent form control with the current extent
 	
 	// init the tabular controls
+	$('#respFracThreshold').val(CTPS.countsApp.queryThreshold);
 	$('#queryLocControlsDiv input').on('change', CTPS.countsApp.queryOnControlChange);
 	$('#queryLocControlsDiv select').on('change', CTPS.countsApp.queryOnControlChange);
 	$('#queryTypeDiv input').on('change', CTPS.countsApp.queryOnControlChange);
@@ -92,12 +94,41 @@ CTPS.countsApp.initSubmit = function() {
 								   "onSelect": CTPS.countsApp.queryOnControlChange});
 	$('#toDateControl').on('change', CTPS.countsApp.queryOnControlChange);
 	$('.nestedCheckboxes').on('change', CTPS.countsApp.toggleNestedCheckboxes);
-	$('#queryTimeDiv input[type=radio]').on('change', CTPS.countsApp.queryOnControlChange);
+	$('#aggregationIntervalDiv input').on('change', function(e) {
+															 if (e.target.id == "anyIntControl" && e.target.checked &&
+																 (document.theForm.aggr.checked == true || document.theForm.intLimit.checked == true)) {
+																 document.theForm.aggr.checked = false;
+																 document.theForm.intLimit.checked = false;
+															 } else if (e.target.id == "hourlyControl" && e.target.checked && 
+																		(document.theForm.aggr.checked == false || document.theForm.intLimit.checked == true)) {
+																 document.theForm.aggr.checked = true;
+																 document.theForm.intLimit.checked = false;
+															 } else if (e.target.id == "halfHourlyControl" && e.target.checked && 
+																		document.theForm.aggr.checked == false && document.theForm.intLimit.checked == false) {
+																 document.theForm.aggr = true;
+																 document.theForm.intLimit.checked = true;
+															 } else if (e.target.id == "qtrHourlyControl" && e.target.checked && 
+																		(document.theForm.aggr.checked == true || document.theForm.intLimit.checked == false)) {
+																 document.theForm.aggr.checked = false;
+																 document.theForm.intLimit.checked = true;
+															 } else if (e.target.id == "aggr" && e.target.checked && 
+																		(document.theForm.intSel.value == "0" || document.theForm.intSel.value == "15")) {
+																 document.theForm.intSel.value = "h";
+															 } else if (e.target.id == "intLimit" && e.target.checked &&
+																		(document.theForm.intSel.value == "0" || document.theForm.intSel.value == "60")) {
+																 document.theForm.intSel.value = "q";
+															 } else if (!document.theForm.aggr.checked && !document.theForm.intLimit.checked &&
+																		document.theForm.intSel.value != "0") {
+																 document.theForm.intSel.value = "0";
+															 }
+															 CTPS.countsApp.queryOnControlChange();
+															 });
 	$('#queryProjDiv select').on('change', CTPS.countsApp.queryOnControlChange);
 	$('#download').on('click', function(e) { 
 										if ($('#download').prop('zipFile')) {
 											window.open($('#download').prop('zipFile'))
 										} else {
+											$('#download').text('Creating...').prop('disabled','disabled');
 											$('#modeControl').val('zip'); 
 											CTPS.countsApp.queryOnControlChange(); 
 											$('#modeControl').val('both'); 
@@ -142,15 +173,46 @@ CTPS.countsApp.updateOptionList = function(selObj, data, optTextAccessFunc, optV
 	if (typeof(optValSel) !== 'undefined' && optValSel != selObj.val()) CTPS.countsApp.queryOnControlChange();
 }; // CTPS.countsApp.updateOptionList
 
+CTPS.countsApp.initOnScreenTimer = function() {
+	CTPS.countsApp.timerRunning = true;
+	$('#treeControlDiv').html('Query sent');
+	window.setTimeout(CTPS.countsApp.continueOnScreenTimer, 1000);
+}
+
+CTPS.countsApp.continueOnScreenTimer = function() {
+	if(CTPS.countsApp.timerRunning) {
+		window.setTimeout(CTPS.countsApp.continueOnScreenTimer, 1000);
+		if($('#timerElapsedSeconds').length == 0) {
+			$('#treeControlDiv').html('Waiting for server response... <span id="timerElapsedSeconds">1</span>');
+		} else {
+			$('#treeControlDiv').html('Waiting for server response... <span id="timerElapsedSeconds">' + String(parseInt($('#timerElapsedSeconds').text(),10) + 1) + '</span>');
+		}
+	}
+}
+
+CTPS.countsApp.clearOnScreenTimer = function() {
+	CTPS.countsApp.timerRunning = false;
+	$('#treeControlDiv').html('Response received. Proceeding with additional processing.');
+}
+
 CTPS.countsApp.queryOnControlChange = function() {
+	if (CTPS.countsApp.responsePending) {	// don't pile up requests--let control changes accumulate until previous request has a response
+		CTPS.countsApp.requestsPending = true;
+		return;
+	}
+	CTPS.countsApp.requestsPending = false;
+	CTPS.countsApp.responsePending = true;
 	$.getJSON("counts_query_to_JSON.cfm", $('#theForm').serialize(),
 		function (data) {
+			CTPS.countsApp.responsePending = false;
+			CTPS.countsApp.clearOnScreenTimer();
 			CTPS.countsApp.data = data;
-			if (data.zipFile) {
+			if (data.zipFile) {	// no data returned by query, only a reference to a zip file
 				// update download button to get ZIP file
-				$('#download').text(data.zipFile.substr(data.zipFile.indexOf('/')+1)).prop('zipFile',data.zipFile);
-			} else {
+				$('#download').text(data.zipFile.substr(data.zipFile.indexOf('/')+1)).prop('zipFile',data.zipFile).prop('disabled','');
+			} else {	// data returned from query
 				if (data.townList && (typeof(data.count_parts) === 'undefined' || data.count_parts.DATA.length)) {
+					// update query controls with new limits or lists based upon the query results
 					CTPS.countsApp.updateOptionList($('#townControl'),[""].concat(data.townList), 
 						function(d) { return d[0] }, function(d) { return d[1] }, $('#townControl').val());
 					CTPS.countsApp.updateOptionList($('#routeControl'),
@@ -205,8 +267,6 @@ CTPS.countsApp.queryOnControlChange = function() {
 							$('#toDateControl').datepicker("option", "defaultDate", maxDate);
 						}
 					}
-					// $('#fromDateControl').val(data.dateRange.DATA.length > 0 ? $.datepicker.formatDate('mm/dd/yy',new Date(data.dateRange.DATA[0][0])) : '');
-					// $('#toDateControl').val(data.dateRange.DATA.length > 0 ? $.datepicker.formatDate('mm/dd/yy',new Date(data.dateRange.DATA[0][1])) : '');
 					CTPS.countsApp.updateOptionList($('#projControl'), [""].concat(data.projectList), 
 													  function(d) { return d.project_name }, function(d) { return d.project_id }, 
 													  $('#projControl').val());
@@ -254,13 +314,15 @@ CTPS.countsApp.queryOnControlChange = function() {
 											parseInt(data.dataTableCounts.data_quarter_hourly) +
 											parseInt(data.dataTableCounts.data_monthly) + parseInt(data.dataTableCounts.data_spanning);
 				}
-	
+
+				$('#download').prop('disabled',data.estRespFrac < CTPS.countsApp.queryThreshold ? '' : 'disabled');
+					
 				var respMsg, estRespPct = parseFloat(data.estRespFrac) * 100;
 				respMsg = 'Total count database size: <strong>' + String(CTPS.countsApp.dbSize).replace(/\d(?=(\d{3})+$)/g, '$&,') + '</strong> rows.<br>';
-				respMsg += 'Estimated rows requested: <strong>' + (estRespPct / 100 * CTPS.countsApp.dbSize).toFixed(0).replace(/\d(?=(\d{3})+$)/g, '$&,') + '</strong> (<strong>' + 
-							(estRespPct).toFixed(4) + '%</strong>).<br>';
+				/* respMsg += 'Estimated rows requested: <strong>' + (estRespPct / 100 * CTPS.countsApp.dbSize).toFixed(0).replace(/\d(?=(\d{3})+$)/g, '$&,') + '</strong> (<strong>' + 
+							(estRespPct).toFixed(4) + '%</strong>).<br>'; */
 				if (typeof(CTPS.countsApp.data.count_parts) === 'undefined') {
-					respMsg += 'Requests for more than 1% will be ignored.';
+					respMsg += 'Requests for more than ' + String(data.estRespFracThreshold * 100) + '% will be ignored.';
 				} else {
 					respMsg += 'Total count_part records returned: <strong>' + String(data.count_parts.DATA.length).replace(/\d(?=(\d{3})+$)/g, '$&,') + '</strong>.<br>';
 					respMsg += 'Data rows estimated from count_part records: <strong>' + String(data.estDataRows).replace(/\d(?=(\d{3})+$)/g, '$&,') + '</strong>.<br>';
@@ -269,8 +331,25 @@ CTPS.countsApp.queryOnControlChange = function() {
 				
 				$('#responseOutputDiv').empty();
 				
-				for(data_table in CTPS.countsApp.data.data_tables) {
-					$('#responseOutputDiv')
+				for (data_table in CTPS.countsApp.data.data_tables) {
+					strHTML = '<h3>' + (data_table == 'spanning' ? 'Yearly or other time span' : data_table) + '</h3>';
+					strHTML += '<table><thead><tr>';
+					for (col = 0; col < CTPS.countsApp.data.data_tables[data_table].COLUMNS.length; col++) {
+						strHTML += '<th><div class="' + CTPS.countsApp.data.data_tables[data_table].COLUMNS[col].replace(/^[AP]M_.+$/, 'count_data') + '">' + 
+									CTPS.countsApp.data.data_tables[data_table].COLUMNS[col].replace(/_/g, ' ') + '</div></th>';
+					}
+					strHTML += '</tr></thead><tbody>';
+					for (row = 0; row < CTPS.countsApp.data.data_tables[data_table].DATA.length; row++) {
+						strHTML += '<tr>';
+						for (col = 0; col < CTPS.countsApp.data.data_tables[data_table].DATA[row].length; col++) {
+							strHTML += '<td>' + CTPS.countsApp.data.data_tables[data_table].DATA[row][col] + '</td>';
+						}
+						strHTML += '</tr>';
+					}
+					strHTML += '</tbody></table>';
+					$('#responseOutputDiv').append(strHTML);
+					// Note: the code below was a lot slower at rendering the huge tables needed than the straightforward loops above
+					/* $('#responseOutputDiv')
 						.append($('<h3>').text(data_table == 'spanning' ? 'Yearly or other time span' : data_table))
 						.append($('<table>')
 								.append($('<thead>').append(CTPS.countsApp.data.data_tables[data_table].COLUMNS.reduce(function(prevVal, currVal) {
@@ -280,11 +359,20 @@ CTPS.countsApp.queryOnControlChange = function() {
 											 return preVal.append(currVal.reduce(function(prevVal, currVal) {
 																		  return prevVal.append($('<td>').text(currVal));
 																		  }, $('<tr>')));
-											 }, $('<tbody>'))));
+											 }, $('<tbody>')))); */
 				}
 				
 				document.forms['theForm'].elements['mode'].value = "both";
+				if (CTPS.countsApp.requestsPending) {
+					CTPS.countsApp.queryOnControlChange();
+				}
 			}
+		  }).fail(function() {
+			  CTPS.countsApp.responsePending = false;
+			  $('#download').val('Create download').prop('disabled','');
+			  $('#treeControlDiv').html('The last query failed for some reason.');
+			  $('#responseOutputDiv').empty();
 		  });
+	CTPS.countsApp.initOnScreenTimer();
 	$('#download').text('Create download').removeProp('zipFile');
 }; // CTPS.countsApp.queryOnControlChange()

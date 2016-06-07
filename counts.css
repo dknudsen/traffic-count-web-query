@@ -113,6 +113,9 @@ label	{
 	margin-left: 1em;
 }
 #aggregationIntervalDiv	{
+	font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
+	font-size: 9pt;
+	margin-top: 1em;
 	display: none;
 }
 #queryProjDiv	{
@@ -162,6 +165,9 @@ label	{
 	overflow: scroll;
 	height: 600px;
 }
+
+#responseOutputDiv table	{ table-layout: fixed; }
+
 #responseOutputDiv th	{
 	font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
 	font-size: 10pt;
@@ -170,6 +176,39 @@ label	{
 	font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
 	font-size: 9pt;
 }
+#responseOutputDiv .COUNT_LOCATION_ID	{ width: 5em; }
+#responseOutputDiv .STREETNAME			{ width: 15em; }
+#responseOutputDiv .AUTO_RTE_NUMBER		{ width: 4em; }
+#responseOutputDiv .ALT_RTE_NUMBER		{ width: 6em; }
+#responseOutputDiv .ROADINVENTORY_ID	{ width: 6em; }
+#responseOutputDiv .LOC_DESC			{ width: 25em; }
+#responseOutputDiv .TOWN_ID				{ width: 3em; }
+#responseOutputDiv .TOWN				{ width: 12em; }
+#responseOutputDiv .X					{ width: 6em; }
+#responseOutputDiv .Y					{ width: 6em; }
+#responseOutputDiv .AGENCY_ID			{ width: 2em; }
+#responseOutputDiv .AGENCY				{ width: 18em; }
+#responseOutputDiv .CLIENT_ID			{ width: 2em; }
+#responseOutputDiv .CLIENT				{ width: 15em; }
+#responseOutputDiv .TYPE_ID				{ width: 2em; }
+#responseOutputDiv .PROJECT_ID			{ width: 2em; }
+#responseOutputDiv .DATE_FIRST			{ width: 9.5em; }
+#responseOutputDiv .DATE_LAST			{ width: 9.5em; }
+#responseOutputDiv .TYPE				{ width: 5em; }
+#responseOutputDiv .TYPE_DESCRIPTION	{ width: 25em; }
+#responseOutputDiv .PROJECT_NAME		{ width: 15em; }
+#responseOutputDiv .PROJECT_DESCRIPTION	{ width: 25em; }
+#responseOutputDiv .DIR					{ width: 1em; }
+#responseOutputDiv .LANES				{ width: 2em; }
+#responseOutputDiv .LANE_RANGE			{ width: 3em; }
+#responseOutputDiv .CATEGORY_CODE		{ width: 2em; }
+#responseOutputDiv .DATA_TABLE			{ width: 7em; }
+#responseOutputDiv .DATE_START			{ width: 9.5em; }
+#responseOutputDiv .DATE_END			{ width: 9.5em; }
+#responseOutputDiv .CP_DESC				{ width: 37em; }
+#responseOutputDiv .EST_DATA_ROWS		{ width: 5em; }
+#responseOutputDiv .count_data			{ width: 3em; }
+
 #responseManipulationDiv	{
 	text-align: right;
 }
