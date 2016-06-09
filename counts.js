@@ -276,9 +276,9 @@ CTPS.countsApp.queryOnControlChange = function() {
 					CTPS.countsApp.updateOptionList($('#clientControl'), [""].concat(data.clientList), 
 													  function(d) { return d.client }, function(d) { return d.client_id }, 
 													  $('#clientControl').val());
-					if (typeof(data.numCats) !== 'undefined' && data.numCats > 1) $('#sumCatsDiv').show(); else $('#sumCatsDiv').hide();
-					if (typeof(data.numDirs) !== 'undefined' && data.numDirs > 1) $('#sumDirsDiv').show(); else $('#sumDirsDiv').hide();
-					if (typeof(data.numLanes) !== 'undefined' && data.numLanes > 1) $('#sumLanesDiv').show(); else $('#sumLanesDiv').hide();
+					if (typeof(data.numCats) !== 'undefined' && data.numCats > 1) $('#sumCatsDiv').show(); else { $('#sumCatsDiv').hide(); $('#sumCatsControl').prop('checked',false); }
+					if (typeof(data.numDirs) !== 'undefined' && data.numDirs > 1) $('#sumDirsDiv').show(); else { $('#sumDirsDiv').hide(); $('#sumDirsControl').prop('checked',false); }
+					if (typeof(data.numLanes) !== 'undefined' && data.numLanes > 1) $('#sumLanesDiv').show(); else { $('#sumLanesDiv').hide(); $('#sumLanesControl').prop('checked',false); }
 					if (typeof(data.distinctType) != 'undefined' && data.distinctType === 'ADT') {
 						$('#ADTDiv').show();
 						if (document.forms['theForm'].elements['adt'].value === '') $('#ADTAnnualControl').prop('checked',true);
@@ -287,13 +287,13 @@ CTPS.countsApp.queryOnControlChange = function() {
 						$('#ADTAnnualControl').prop('checked',false);
 						$('#ADTMonthlyControl').prop('checked',false);
 					}
-					if (typeof(data.data_quarter_hourly) !== 'undefined') {
+					if (typeof(data.data_quarter_hourly) !== 'undefined' || typeof(data.data_half_hourly) !== 'undefined') {
 						$('#aggregationIntervalDiv').show();
-						if (document.forms['theForm'].elements['aggr'].value === '') $('#hourlyControl').prop('checked',true);
 					} else {
 						$('#aggregationIntervalDiv').hide();
-						$('#hourlyControl').prop('checked',false);
-						$('#qtrHourlyControl').prop('checked',false);
+						$('#anyIntControl').prop('checked',true);
+						$('#aggr').prop('checked',false);
+						$('#intLimit').prop('checked',false);
 					}
 				}
 	

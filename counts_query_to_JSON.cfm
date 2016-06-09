@@ -347,6 +347,7 @@
         <cfoutput><cfloop index="data_table" delimiters="," list="#data_table_list#">
 
 			<cfset isJoinRoads = (params.fc != "") OR (params.ft != "")>
+            <cfset isGrouping = (params.catSum EQ "on") OR (params.dirSum EQ "on") OR (params.lnSum EQ "on")>
             <cfquery name="data" datasource="counts" result="main_query">
                 SELECT 
                     l.count_location_id, 
@@ -369,29 +370,29 @@
                     c.date_last,
                     types.type,
                     types.description AS type_description,
-                    projects.name AS project_name,
-                    <!---projects.description AS project_description,--->
-                    DECODE(cp.direction, 1, 'N', 2, 'S', 3, 'E', 4, 'W', '') AS dir,
-                    cp.lanes,
+                    projects.name AS project_name,<cfif params.dirSum NEQ "on">
+                    DECODE(cp.direction, 1, 'N', 2, 'S', 3, 'E', 4, 'W', '') AS dir,</cfif><cfif params.lnSum NEQ "on"> <!--- if summing directions, omit direction col. --->
+                    cp.lanes,																							<!--- if summing lanes, omit both lane-related cols. --->
                     DECODE(BITAND(cp.lanes,1),1,'0') || DECODE(BITAND(cp.lanes,2),2,'1') || DECODE(BITAND(cp.lanes,4),4,'2') || DECODE(BITAND(cp.lanes,8),8,'3') || 
                         DECODE(BITAND(cp.lanes,16),16,'4') || DECODE(BITAND(cp.lanes,32),32,'5') || DECODE(BITAND(cp.lanes,64),64,'6') || DECODE(BITAND(cp.lanes,128),128,'7') || 
-                        DECODE(BITAND(cp.lanes,256),256,'8') AS lange_range,
-                    cp.category_code,
+                        DECODE(BITAND(cp.lanes,256),256,'8') AS lange_range,</cfif><cfif params.catSum NEQ "on">
+                    cp.category_code,</cfif>																			<!--- if summing categories, omit category col. --->
                     cp.data_table,
                     d.date_start,
                     d.date_end,
                     cp.description AS cp_desc,
-                    DECODE(c.type_id,4,EXTRACT(YEAR FROM cp.date_end) - EXTRACT(YEAR FROM cp.date_start) + 1,
-                        TRUNC(cp.date_end) - TRUNC(cp.date_start) + 1) AS est_data_rows,
                     <!--- Specify the actual data columns with hard-coded lists for monthly and spanning tables and using a loop for hourly, half-hourly, and quarter-hourly tables.
 						  If time interval aggregation has been specified, generate calculated roll-up data columns with aliases within the loop. --->
-                    <cfif data_table EQ "spanning">d.span_count<cfelseif 
-					data_table EQ "monthly">d.january,d.february,d.march,d.april,d.may,d.june,d.july,d.august,d.september,d.october,d.november,d.december<cfelse
+                    <cfif data_table EQ "spanning"><cfif isGrouping>SUM(</cfif>d.span_count<cfif isGrouping>) AS span_count</cfif><cfelseif 
+					data_table EQ "monthly"><cfloop index="colMonth" list="january,february,march,april,may,june,july,august,september,october,november,december"><cfif 
+					isGrouping>SUM(</cfif>d.#colMonth#<cfif isGrouping>) AS #colMonth#</cfif><cfif colMonth NEQ "december">,</cfif></cfloop><cfelse
                     ><cfif data_table EQ "hourly"><cfset interval = 60><cfelseif data_table EQ "half_hourly"><cfset interval = 30><cfelse><cfset interval = 15></cfif
                     ><cfset start_time = DateAdd("n",interval,CreateDateTime(2000,1,1,0,0,0))><cfset end_time = CreateDateTime(2000,1,2,0,0,1)
-					><cfloop index="count_time" from="#start_time#" to="#end_time#" step="#CreateTimeSpan(0,0,interval,0)#"
+					><cfloop index="count_time" from="#start_time#" to="#end_time#" step="#CreateTimeSpan(0,0,interval,0)#"><cfif isGrouping AND 
+					(params.aggr NEQ "on" OR ((DatePart("n",count_time) MOD IIf(params.intSel EQ "",60,params.intSel)) EQ (interval MOD 60)))>SUM(</cfif
                     >#TimeFormat(count_time,"tt_h")#<cfif DatePart("n",count_time) NEQ 0>#TimeFormat(count_time,"_mm")#</cfif><cfif params.aggr EQ "on" AND interval LT params.intSel
-					><cfif DatePart("n",count_time) MOD params.intSel NEQ 0>+<cfelse> AS #TimeFormat(count_time,"tt_h")#<cfif DatePart("n",count_time) NEQ 0
+					><cfif DatePart("n",count_time) MOD params.intSel NEQ 0>+<cfelse><cfif isGrouping>)</cfif> AS #TimeFormat(count_time,"tt_h")#<cfif DatePart("n",count_time) NEQ 0
+					>#TimeFormat(count_time,"_mm")#</cfif></cfif><cfelse><cfif isGrouping>) AS #TimeFormat(count_time,"tt_h")#<cfif DatePart("n",count_time) NEQ 0
 					>#TimeFormat(count_time,"_mm")#</cfif></cfif></cfif><cfif end_time - count_time GT 0.0003 AND 
 					(params.aggr NEQ "on" OR interval GTE params.intSel OR DatePart("n",count_time) MOD params.intSel EQ 0)>,</cfif></cfloop
                     ></cfif>
@@ -431,6 +432,48 @@
                     AND c.project_id = #params.prj#</cfif><cfif params.agcy NEQ "">
                     AND c.agency = #params.agcy#</cfif><cfif params.cl NEQ "">
                     AND c.client = #params.cl#</cfif>
+                <cfif isGrouping>
+                GROUP BY	<!--- include a group by clause only if summing counts across directions and/or lanes and/or categories --->
+                    t.town,
+                    l.town_id, 
+                    l.description,
+                    l.count_location_id, 
+                    c.type_id,
+                    c.project_id,
+                    c.date_first,
+                    c.date_last,<cfif params.dirSum NEQ "on">
+                    DECODE(cp.direction, 1, 'N', 2, 'S', 3, 'E', 4, 'W', ''),</cfif><cfif params.lnSum NEQ "on">	<!--- if summing across directions, don't group by them --->
+                    cp.lanes,																						<!--- if summing across lanes, don't group by them --->
+                    DECODE(BITAND(cp.lanes,1),1,'0') || DECODE(BITAND(cp.lanes,2),2,'1') || DECODE(BITAND(cp.lanes,4),4,'2') || DECODE(BITAND(cp.lanes,8),8,'3') || 
+                        DECODE(BITAND(cp.lanes,16),16,'4') || DECODE(BITAND(cp.lanes,32),32,'5') || DECODE(BITAND(cp.lanes,64),64,'6') || DECODE(BITAND(cp.lanes,128),128,'7') || 
+                        DECODE(BITAND(cp.lanes,256),256,'8'),</cfif><cfif params.catSum NEQ "on">
+                    cp.category_code,</cfif>																		<!--- if summing across categories, don't group by them --->
+                    d.date_start,
+                    l.streetname, 
+                    l.auto_rte_number, 
+                    l.alt_rte_number, 
+                    l.roadinventory_id, 
+                    sde.st_x(l.shape),
+                    sde.st_y(l.shape),
+                    c.agency, 
+                    agency.org_name, 
+                    c.client, 
+                    client.org_name,
+                    types.type,
+                    types.description,
+                    projects.name,
+                    cp.data_table,
+                    d.date_end,
+                    cp.description
+                </cfif>
+                ORDER BY	<!--- make sure the data is sorted in some reasonable way --->
+                	t.town, l.description, l.count_location_id,
+                    c.type_id, c.project_id,
+                    c.date_first, c.date_last,<cfif params.dirSum NEQ "on">
+                    DECODE(cp.direction, 1, 'N', 2, 'S', 3, 'E', 4, 'W', ''),</cfif><cfif params.lnSum NEQ "on">
+                    cp.lanes,</cfif><cfif params.catSum NEQ "on">
+                    cp.category_code,</cfif>
+                    d.date_start
             </cfquery>
 
 			<!--- OUTPUT the JSON --->
