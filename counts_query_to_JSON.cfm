@@ -25,6 +25,9 @@
 <cfif params.type NEQ "4"><cfset params.adt = ""></cfif>
 <!--- set an estimated response fraction threshold if not provided in parameters --->
 <cfif params.erft EQ ""><cfset params.erft = 0.01></cfif>
+<!--- set convenience variables --->
+<cfset isGrouping = (params.catSum EQ "on") OR (params.dirSum EQ "on") OR (params.lnSum EQ "on")>
+<cfset isJoinRoads = (params.fc != "") OR (params.ft != "")>
 
 <!--- estimate size of response recordset --->
 <!---   TOWN, ROUTE, STREET --->
@@ -186,7 +189,6 @@
 				except the count data tables, in order to find domains for all possible query parameters --->
 
 		<!--- decide the tables to be joined --->
-        <cfset isJoinRoads = (params.fc != "") OR (params.ft != "")>
         <cfquery name="cp" datasource="counts" result="main_query"><cfoutput>
             SELECT 
                 l.count_location_id, 
@@ -251,9 +253,18 @@
                                                      params.aoi NEQ "" AND params.mapX NEQ "">)</cfif>) = 1</cfif><cfif params.type NEQ "">
                 AND c.type_id = #params.type#</cfif><cfif params.adt NEQ "">
                 AND cp.data_table = '<cfif params.adt EQ "a">spanning<cfelse>monthly</cfif>'</cfif><cfif params.frm NEQ "">
-                AND date_end > TO_DATE('#params.frm#','MM/DD/YYYY')</cfif><cfif params.to NEQ "">
-                AND date_start < TO_DATE('#params.to#','MM/DD/YYYY')</cfif><cfif params.rec NEQ "">
-                AND cp.date_end = c.date_last</cfif><cfif params.prj NEQ "">
+                AND cp.date_end > TO_DATE('#params.frm#','MM/DD/YYYY')</cfif><cfif params.to NEQ "">
+                AND cp.date_start < TO_DATE('#params.to#','MM/DD/YYYY')</cfif><cfif params.rec NEQ "">
+                AND c.date_last = (SELECT MAX(date_last) 
+                					FROM counts, count_locations 
+                                    WHERE count_location_id = l.count_location_id
+                                    	AND type_id = c.type_id
+                                        AND project_id = c.project_id
+                                        AND client = c.client
+                                        AND agency = c.agency
+                                    	AND count_location_id = count_loc_id<cfif params.frm NEQ "">
+                                        AND date_last > TO_DATE('#params.frm#','MM/DD/YYYY')</cfif><cfif params.to NEQ "">
+                                        AND date_first < TO_DATE('#params.to#','MM/DD/YYYY')</cfif>)</cfif><cfif params.prj NEQ "">
                 AND c.project_id = #params.prj#</cfif><cfif params.agcy NEQ "">
 				AND c.agency = #params.agcy#</cfif><cfif params.cl NEQ "">
 				AND c.client = #params.cl#</cfif>
@@ -299,7 +310,21 @@
         <cfquery name="distinctLanes" dbtype="query">SELECT lanes from cp GROUP BY lanes</cfquery>
         <cfquery name="distinctTables" dbtype="query">SELECT data_table from cp GROUP BY data_table</cfquery>
         <!--- DATA ROW ESTIMATE --->
-        <cfquery name="estDataRows" dbtype="query">SELECT sum(est_data_rows) AS total_est_data_rows from cp</cfquery>
+        <cfif isGrouping>
+        	<cfquery name="cpGrouped" dbtype="query">
+            	SELECT est_data_rows
+                FROM cp
+                GROUP BY
+                    count_location_id, 
+                    agency_id, client_id, type_id, project_id, date_first, date_last,<cfif params.dirSum NEQ "on">
+                    dir,</cfif><cfif params.lnSum NEQ "on">
+                    lanes, lange_range,</cfif><cfif params.catSum NEQ "on">
+                    category_code,</cfif>
+                    data_table, date_start, date_end, cp_desc,
+                    est_data_rows
+            </cfquery>
+        </cfif>
+        <cfquery name="estDataRows" dbtype="query">SELECT sum(est_data_rows) AS total_est_data_rows from cp<cfif isGrouping>Grouped</cfif></cfquery>
         
         <!--- OUTPUT the JSON --->
 		<cfoutput>"geoExtent":[</cfoutput><cfoutput query="geoExtent">[#min_x#,#min_y#],[#max_x#,#max_y#]</cfoutput><cfoutput 
@@ -346,8 +371,6 @@
 
         <cfoutput><cfloop index="data_table" delimiters="," list="#data_table_list#">
 
-			<cfset isJoinRoads = (params.fc != "") OR (params.ft != "")>
-            <cfset isGrouping = (params.catSum EQ "on") OR (params.dirSum EQ "on") OR (params.lnSum EQ "on")>
             <cfquery name="data" datasource="counts" result="main_query">
                 SELECT 
                     l.count_location_id, 
@@ -428,7 +451,17 @@
                     AND cp.data_table = '<cfif params.adt EQ "a">spanning<cfelse>monthly</cfif>'</cfif><cfif params.frm NEQ "">
                     AND d.date_end > TO_DATE('#params.frm#','MM/DD/YYYY')</cfif><cfif params.to NEQ "">
                     AND d.date_start < TO_DATE('#params.to#','MM/DD/YYYY')</cfif><cfif params.rec NEQ "">
-	                AND cp.date_end = c.date_last</cfif><cfif params.prj NEQ "">
+                    AND c.date_last = (SELECT MAX(date_last) 
+                                        FROM counts, count_locations 
+                                        WHERE count_location_id = l.count_location_id 
+                                            AND type_id = c.type_id
+                                            AND project_id = c.project_id
+                                            AND client = c.client
+                                            AND agency = c.agency
+                                            AND count_location_id = count_loc_id<cfif params.frm NEQ "">
+                                            AND date_last > TO_DATE('#params.frm#','MM/DD/YYYY')</cfif><cfif params.to NEQ "">
+                                            AND date_first < TO_DATE('#params.to#','MM/DD/YYYY')</cfif>)</cfif><cfif params.prj NEQ "">
+	                <!--- AND cp.date_end = c.date_last</cfif><cfif params.prj NEQ ""> --->
                     AND c.project_id = #params.prj#</cfif><cfif params.agcy NEQ "">
                     AND c.agency = #params.agcy#</cfif><cfif params.cl NEQ "">
                     AND c.client = #params.cl#</cfif>

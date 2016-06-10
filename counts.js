@@ -93,6 +93,7 @@ CTPS.countsApp.initSubmit = function() {
 	$('#toDateControl').datepicker({"dateFormat": "mm/dd/yy", "numberOfMonths": 1, "changeMonth": true, "changeYear": true, "constrainInput": true,
 								   "onSelect": CTPS.countsApp.queryOnControlChange});
 	$('#toDateControl').on('change', CTPS.countsApp.queryOnControlChange);
+	$('#mostRecentControl').on('change', CTPS.countsApp.queryOnControlChange);
 	$('.nestedCheckboxes').on('change', CTPS.countsApp.toggleNestedCheckboxes);
 	$('#aggregationIntervalDiv input').on('change', function(e) {
 															 if (e.target.id == "anyIntControl" && e.target.checked &&
@@ -141,7 +142,8 @@ CTPS.countsApp.initSubmit = function() {
 }; // CTPS.countsApp.init()
 
 CTPS.countsApp.toggleNestedCheckboxes = function(e) {
-	var targCheckbox = $('#' + e.target.id);
+	var targCheckbox = $('#' + (typeof(e) == "string" ? e : e.target.id));
+	if (typeof(e) == "string") targCheckbox.prop('checked',!targCheckbox.prop('cehcked'));
 	var isChildCheckbox = (targCheckbox.parent().has('div').length == 0);
 	var nestingDiv = isChildCheckbox ? targCheckbox.parent() : targCheckbox.siblings('div');
 	var nestedCheckboxes = nestingDiv.children('input[type=checkbox]');
@@ -152,7 +154,7 @@ CTPS.countsApp.toggleNestedCheckboxes = function(e) {
 			nestingDiv.hide();
 		}
 	} else {
-		if (e.target.checked) {
+		if (targCheckbox.prop('checked')) {
 			nestedCheckboxes.prop('checked',false);
 			nestingDiv.hide();
 		} else nestingDiv.show();
@@ -286,6 +288,16 @@ CTPS.countsApp.queryOnControlChange = function() {
 						$('#ADTDiv').hide();
 						$('#ADTAnnualControl').prop('checked',false);
 						$('#ADTMonthlyControl').prop('checked',false);
+					}
+					if (typeof(data.data_quarter_hourly) !== 'undefined' || typeof(data.data_half_hourly) !== 'undefined' || typeof(data.data_hourly) !== 'undefined') {
+						$('#dayControlsDiv').show();
+					} else {
+						$('#dayControlsDiv').hide();
+						if (!$('#allDaysControl').prop('checked')) CTPS.countsApp.toggleNestedCheckboxes('allDaysControl');
+						if (!$('#allMonthsControl').prop('checked')) CTPS.countsApp.toggleNestedCheckboxes('allMonthsControl');
+						$('#avgDaysControl').prop('checked',false);
+						$('#avgDaysByDOWControl').prop('checked',false);
+						$('#avgDaysByMonthControl').prop('checked',false);
 					}
 					if (typeof(data.data_quarter_hourly) !== 'undefined' || typeof(data.data_half_hourly) !== 'undefined') {
 						$('#aggregationIntervalDiv').show();

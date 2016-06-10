@@ -81,40 +81,44 @@
             	<label for="fromDateControl">Date range</label><br><input id="fromDateControl" name="frm" type="text" size="6">
                 <label for="toDateControl">to </label><input id="toDateControl" name="to" type="text" size="6"><br>
                 <input id="mostRecentControl" name="rec" type="checkbox"><label for="mostRecentControl">Most recent only</label><br>
-                <div class="nestedCheckboxes">
-                    <input id="allDaysControl" name="days" type="checkbox" checked><label for="allDaysControl">All days</label>
-                    <div id="daysDiv">
-                        <input id="sundayControl" name="sun" type="checkbox"><label for="sundayControl">Su</label>
-                        <input id="mondayControl" name="mon" type="checkbox"><label for="mondayControl">M</label>
-                        <input id="tuesdayControl" name="tue" type="checkbox"><label for="tuesdayControl">T</label>
-                        <input id="wednesdayControl" name="wed" type="checkbox"><label for="wednesdayControl">W</label>
-                        <input id="thursdayControl" name="thu" type="checkbox"><label for="thursdayControl">Th</label>
-                        <input id="fridayControl" name="fri" type="checkbox"><label for="fridayControl">F</label>
-                        <input id="saturdayControl" name="sat" type="checkbox"><label for="saturdayControl">Sa</label>
+                
+                <div id="dayControlsDiv">
+                    <div class="nestedCheckboxes">
+                        <input id="allDaysControl" name="days" type="checkbox" checked><label for="allDaysControl">All days</label>
+                        <div id="daysDiv">
+                            <input id="sundayControl" name="sun" type="checkbox"><label for="sundayControl">Su</label>
+                            <input id="mondayControl" name="mon" type="checkbox"><label for="mondayControl">M</label>
+                            <input id="tuesdayControl" name="tue" type="checkbox"><label for="tuesdayControl">T</label>
+                            <input id="wednesdayControl" name="wed" type="checkbox"><label for="wednesdayControl">W</label>
+                            <input id="thursdayControl" name="thu" type="checkbox"><label for="thursdayControl">Th</label>
+                            <input id="fridayControl" name="fri" type="checkbox"><label for="fridayControl">F</label>
+                            <input id="saturdayControl" name="sat" type="checkbox"><label for="saturdayControl">Sa</label>
+                        </div>
                     </div>
-                </div>
-                <div class="nestedCheckboxes">
-                    <input id="allMonthsControl" name="mos" type="checkbox" checked><label for="allMonthsControl">All months</label>
-                    <div id="monthsDiv">
-                        <input id="janControl" name="j" type="checkbox"><label for="janControl">J</label>
-                        <input id="febControl" name="f" type="checkbox"><label for="febControl">F</label>
-                        <input id="marControl" name="mar" type="checkbox"><label for="marControl">M</label>
-                        <input id="aprControl" name="apr" type="checkbox"><label for="aprControl">A</label>
-                        <input id="mayControl" name="may" type="checkbox"><label for="mayControl">M</label>
-                        <input id="junControl" name="jun" type="checkbox"><label for="junControl">J</label>
-                        <input id="julControl" name="jul" type="checkbox"><label for="julControl">J</label>
-                        <input id="augControl" name="aug" type="checkbox"><label for="augControl">A</label>
-                        <input id="sepControl" name="s" type="checkbox"><label for="sepControl">S</label>
-                        <input id="octControl" name="o" type="checkbox"><label for="octControl">O</label>
-                        <input id="novControl" name="n" type="checkbox"><label for="novControl">N</label>
-                        <input id="decControl" name="d" type="checkbox"><label for="decControl">D</label>
+                    <div class="nestedCheckboxes">
+                        <input id="allMonthsControl" name="mos" type="checkbox" checked><label for="allMonthsControl">All months</label>
+                        <div id="monthsDiv">
+                            <input id="janControl" name="j" type="checkbox"><label for="janControl">J</label>
+                            <input id="febControl" name="f" type="checkbox"><label for="febControl">F</label>
+                            <input id="marControl" name="mar" type="checkbox"><label for="marControl">M</label>
+                            <input id="aprControl" name="apr" type="checkbox"><label for="aprControl">A</label>
+                            <input id="mayControl" name="may" type="checkbox"><label for="mayControl">M</label>
+                            <input id="junControl" name="jun" type="checkbox"><label for="junControl">J</label>
+                            <input id="julControl" name="jul" type="checkbox"><label for="julControl">J</label>
+                            <input id="augControl" name="aug" type="checkbox"><label for="augControl">A</label>
+                            <input id="sepControl" name="s" type="checkbox"><label for="sepControl">S</label>
+                            <input id="octControl" name="o" type="checkbox"><label for="octControl">O</label>
+                            <input id="novControl" name="n" type="checkbox"><label for="novControl">N</label>
+                            <input id="decControl" name="d" type="checkbox"><label for="decControl">D</label>
+                        </div>
                     </div>
-                </div>
-                <input id="avgDaysControl" name="avg" type="checkbox"><label for="avgDaysControl">Average days</label>
-                <div id="avgDaysDiv">
-                	<input id="avgDaysByDOWControl" name="avgD" type="checkbox"><label for="avgDaysByDOWControl">By day of week</label>
-                    <input id="avgDaysByMonthControl" name="avgM" type="checkbox"><label for="avgDaysByMonthControl">By month</label>
-                </div>
+                    <input id="avgDaysControl" name="avg" type="checkbox"><label for="avgDaysControl">Average days</label>
+                    <div id="avgDaysDiv">
+                        <input id="avgDaysByDOWControl" name="avgD" type="checkbox"><label for="avgDaysByDOWControl">By day of week</label>
+                        <input id="avgDaysByMonthControl" name="avgM" type="checkbox"><label for="avgDaysByMonthControl">By month</label>
+                    </div>
+                </div>  <!-- dayControlsDiv -->
+                
                 <div id="aggregationIntervalDiv">
                 	Count interval:<br>
                 	<input id="anyIntControl" name="intSel" type="radio" value="0" checked><label for="anyIntControl">Any</label>
@@ -124,7 +128,10 @@
                 	<input id="aggr" name="aggr" type="checkbox"><label for="aggr">Aggregate smaller interval data</label><br>
                     <input id="intLimit" name="intLimit" type="checkbox"><label for="intLimit">Omit larger interval data</label><br>
                 </div>
-            </div><div id="queryProjDiv">
+                
+            </div>
+            
+            <div id="queryProjDiv">
             	<h2>Who</h2>
             	<label for="projControl">Count collection project</label><select id="projControl" name="prj"><option value=""></option></select>
                 <label for="agencyControl">Collected by</label><select id="agencyControl" name="agcy"><option value=""></option></select>

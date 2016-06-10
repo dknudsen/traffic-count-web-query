@@ -101,6 +101,9 @@ label	{
 	border-left: 1px silver solid;
 	border-right: 1px solid silver;
 }
+#dayControlsDiv	{
+	display: none;
+}
 #daysDiv	{
 	display: none;
 	margin-left: 1em;
