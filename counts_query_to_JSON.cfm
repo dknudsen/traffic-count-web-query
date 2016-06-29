@@ -17,6 +17,7 @@
 				   "mos,j,f,mar,apr,may,jun,jul,aug,s,o,n,d," &
 				   "avg,avgD,avgM,aggr,intLimit,intSel," &
 				   "prj,agcy,cl," &
+				   "dir,dtSt,lr,cat," &
 				   "erft">
 <cfloop index="p" delimiters="," list=#paramList#>
 	<cfif NOT IsDefined("params." & p)><cfset params[p] = ""></cfif>
@@ -217,7 +218,7 @@
                 cp.lanes,
                 DECODE(BITAND(cp.lanes,1),1,'0') || DECODE(BITAND(cp.lanes,2),2,'1') || DECODE(BITAND(cp.lanes,4),4,'2') || DECODE(BITAND(cp.lanes,8),8,'3') || 
                     DECODE(BITAND(cp.lanes,16),16,'4') || DECODE(BITAND(cp.lanes,32),32,'5') || DECODE(BITAND(cp.lanes,64),64,'6') || DECODE(BITAND(cp.lanes,128),128,'7') || 
-                    DECODE(BITAND(cp.lanes,256),256,'8') AS lange_range,
+                    DECODE(BITAND(cp.lanes,256),256,'8') AS lane_range,
                 cp.category_code,
                 cp.data_table,
                 cp.date_start,
@@ -251,10 +252,17 @@
                                                      params.aoi NEQ "" AND params.mapX NEQ "">,</cfif><cfif
                                                      params.aoi NEQ "">sde.st_geometry('#params.aoi#', 19)</cfif><cfif
                                                      params.aoi NEQ "" AND params.mapX NEQ "">)</cfif>) = 1</cfif><cfif params.type NEQ "">
-                AND c.type_id = #params.type#</cfif><cfif params.adt NEQ "">
+                AND c.type_id = #params.type#</cfif><cfif params.dir NEQ "">
+				AND cp.direction = DECODE('#params.dir#','N',1,'S',2,'E',3,'W',4)</cfif><cfif params.cat NEQ "">
+				AND cp.category_code = #params.cat#</cfif><cfif params.lr NEQ "">
+				AND DECODE(BITAND(cp.lanes,1),1,'0') || DECODE(BITAND(cp.lanes,2),2,'1') || DECODE(BITAND(cp.lanes,4),4,'2') || DECODE(BITAND(cp.lanes,8),8,'3') || 
+                    DECODE(BITAND(cp.lanes,16),16,'4') || DECODE(BITAND(cp.lanes,32),32,'5') || DECODE(BITAND(cp.lanes,64),64,'6') || DECODE(BITAND(cp.lanes,128),128,'7') || 
+                    DECODE(BITAND(cp.lanes,256),256,'8') = '#params.lr#'</cfif><cfif params.intSel NEQ "" and params.intSel NEQ "0" and params.aggr EQ "" and params.intLimit EQ "">
+				AND cp.data_table = DECODE('#params.intSel#','60','hourly','30','half-hourly','15','quarter_hourly')</cfif><cfif params.adt NEQ "">
                 AND cp.data_table = '<cfif params.adt EQ "a">spanning<cfelse>monthly</cfif>'</cfif><cfif params.frm NEQ "">
                 AND cp.date_end > TO_DATE('#params.frm#','MM/DD/YYYY')</cfif><cfif params.to NEQ "">
-                AND cp.date_start < TO_DATE('#params.to#','MM/DD/YYYY')</cfif><cfif params.rec NEQ "">
+                AND cp.date_start < TO_DATE('#params.to#','MM/DD/YYYY')</cfif><cfif params.dtSt NEQ "">
+				AND cp.date_start = TO_DATE('#params.dtSt#','MONTH, DD YYYY HH24:MI:SS')</cfif><cfif params.rec NEQ "">
                 AND c.date_last = (SELECT MAX(date_last) 
                 					FROM counts, count_locations 
                                     WHERE count_location_id = l.count_location_id
@@ -318,7 +326,7 @@
                     count_location_id, 
                     agency_id, client_id, type_id, project_id, date_first, date_last,<cfif params.dirSum NEQ "on">
                     dir,</cfif><cfif params.lnSum NEQ "on">
-                    lanes, lange_range,</cfif><cfif params.catSum NEQ "on">
+                    lanes, lane_range,</cfif><cfif params.catSum NEQ "on">
                     category_code,</cfif>
                     data_table, date_start, date_end, cp_desc,
                     est_data_rows
@@ -336,7 +344,10 @@
             currentRow NEQ RecordCount>,</cfif></cfoutput><cfoutput
         >],"projectList":[</cfoutput><cfoutput query="projectList">{"project_name":"#project_name#","project_description":"#project_description#","project_id":#project_id#}<cfif
             currentRow NEQ RecordCount>,</cfif></cfoutput><cfoutput
-        >],"dateRange":#SerializeJSON(dateRange)#,"count_parts":#SerializeJSON(cp)#</cfoutput><cfoutput 
+        >],"dateRange":#SerializeJSON(dateRange)#,"count_parts":#SerializeJSON(cp)#</cfoutput><cfset queryMetadata = getMetaData(cp)><cfoutput
+		>,"count_parts_col_types": {</cfoutput><cfloop index="colindex" from="1" to="#ArrayLen(queryMetadata)#"><cfoutput
+		>"#queryMetadata[colindex].Name#":"#queryMetadata[colindex].TypeName#"<cfif colindex NEQ ArrayLen(queryMetadata)>,</cfif></cfoutput></cfloop><cfoutput
+		>}</cfoutput><cfoutput 
           query="distinctTables">,"data_#data_table#":true</cfoutput><cfoutput 
           query="distinctTypes"><cfif distinctTypes.RecordCount EQ 1>,"distinctType":"#type#"</cfif></cfoutput><cfoutput
         >,"numCats":#distinctCats.RecordCount#,"numDirs":#distinctDirs.RecordCount#,"numLanes":#distinctLanes.RecordCount#</cfoutput><cfoutput 
@@ -398,7 +409,7 @@
                     cp.lanes,																							<!--- if summing lanes, omit both lane-related cols. --->
                     DECODE(BITAND(cp.lanes,1),1,'0') || DECODE(BITAND(cp.lanes,2),2,'1') || DECODE(BITAND(cp.lanes,4),4,'2') || DECODE(BITAND(cp.lanes,8),8,'3') || 
                         DECODE(BITAND(cp.lanes,16),16,'4') || DECODE(BITAND(cp.lanes,32),32,'5') || DECODE(BITAND(cp.lanes,64),64,'6') || DECODE(BITAND(cp.lanes,128),128,'7') || 
-                        DECODE(BITAND(cp.lanes,256),256,'8') AS lange_range,</cfif><cfif params.catSum NEQ "on">
+                        DECODE(BITAND(cp.lanes,256),256,'8') AS lane_range,</cfif><cfif params.catSum NEQ "on">
                     cp.category_code,</cfif>																			<!--- if summing categories, omit category col. --->
                     cp.data_table,
                     d.date_start,
@@ -447,10 +458,17 @@
                                                          params.aoi NEQ "" AND params.mapX NEQ "">,</cfif><cfif
                                                          params.aoi NEQ "">sde.st_geometry('#params.aoi#', 19)</cfif><cfif
                                                          params.aoi NEQ "" AND params.mapX NEQ "">)</cfif>) = 1</cfif><cfif params.type NEQ "">
-                    AND c.type_id = #params.type#</cfif><cfif params.adt NEQ "">
+                    AND c.type_id = #params.type#</cfif><cfif params.dir NEQ "">
+					AND cp.direction = DECODE('#params.dir#','N',1,'S',2,'E',3,'W',4)</cfif><cfif params.cat NEQ "">
+					AND cp.category_code = #params.cat#</cfif><cfif params.lr NEQ "">
+					AND DECODE(BITAND(cp.lanes,1),1,'0') || DECODE(BITAND(cp.lanes,2),2,'1') || DECODE(BITAND(cp.lanes,4),4,'2') || DECODE(BITAND(cp.lanes,8),8,'3') || 
+						DECODE(BITAND(cp.lanes,16),16,'4') || DECODE(BITAND(cp.lanes,32),32,'5') || DECODE(BITAND(cp.lanes,64),64,'6') || DECODE(BITAND(cp.lanes,128),128,'7') || 
+						DECODE(BITAND(cp.lanes,256),256,'8') = '#params.lr#'</cfif><cfif params.intSel NEQ "" and params.intSel NEQ "0" and params.aggr EQ "" and params.intLimit EQ "">
+					AND cp.data_table = DECODE('#params.intSel#','60','hourly','30','half-hourly','15','quarter_hourly')</cfif><cfif params.adt NEQ "">
                     AND cp.data_table = '<cfif params.adt EQ "a">spanning<cfelse>monthly</cfif>'</cfif><cfif params.frm NEQ "">
                     AND d.date_end > TO_DATE('#params.frm#','MM/DD/YYYY')</cfif><cfif params.to NEQ "">
-                    AND d.date_start < TO_DATE('#params.to#','MM/DD/YYYY')</cfif><cfif params.rec NEQ "">
+                    AND d.date_start < TO_DATE('#params.to#','MM/DD/YYYY')</cfif><cfif params.dtSt NEQ "">
+					AND cp.date_start = TO_DATE('#params.dtSt#','MONTH, DD YYYY HH24:MI:SS')</cfif><cfif params.rec NEQ "">
                     AND c.date_last = (SELECT MAX(date_last) 
                                         FROM counts, count_locations 
                                         WHERE count_location_id = l.count_location_id 
@@ -509,7 +527,7 @@
                     d.date_start
             </cfquery>
 
-			<!--- OUTPUT the JSON --->
+			<!--- OUTPUT the COUNT DATA --->
             <cfif params.mode NEQ "zip">	<!--- if data, not a zip file, is to be returned, generate JSON from the data --->
 	            "#data_table#":#SerializeJSON(data)#<cfif ListLen(data_table_list) GT 1 AND data_table NEQ ListLast(data_table_list,",")>,</cfif>
             <cfelseif data.RecordCount GT 0><!--- if a zip file is to be returned, generate CSV to be appended to zip file --->

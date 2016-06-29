@@ -26,6 +26,66 @@ label	{
 	font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
 	font-size: 9pt;
 }
+.hierarchyLevel {
+	font-weight: bold;
+	margin: 0 0.2em;
+	padding: 0.25em 0.5em 0.2em 0.5em;
+	background-color: #e0e0e0;
+	cursor: -webkit-grab;
+}
+.tree-node {
+	margin-left: 1em;
+	/* border: thin solid gray; */
+}
+.tree-node-expander {
+	display: inline-block;
+	width: 1em;
+	margin-right: 0.5em;
+	text-align: center;
+	font-weight: bold;
+	cursor: pointer;
+	border: thin lightgray solid;
+}
+.tree-leaf>.tree-node-expander {
+	cursor: default;
+	visibility: hidden;
+}
+.tree-node-label {
+	width: auto;
+	display: inline-block;
+	background-color: #f8f8f8;
+	margin-bottom: 2px;
+	cursor: pointer;
+}
+.tree-leaf>.tree-node-label {
+	background-color: lightgray;
+}
+.tree-node>.tree-node-hilite {
+	background-color: #f8f8e0;
+}
+.tree-node>.tree-node-select {
+	background-color: #f8f880;
+}
+.tree-leaf>.tree-node-hilite {
+	background-color: #e0f8e0;
+}
+.tree-leaf>.tree-node-select {
+	background-color: #80f880;
+}
+/*.tree-node-level1 {
+	display: block;
+} 
+.tree-node-level2, 
+.tree-node-level3, 
+.tree-node-level4, 
+.tree-node-level5, 
+.tree-node-level6, 
+.tree-node-level7 {
+	display: none;
+}*/
+.hide-children>.tree-node {
+	display: none;
+}
 #allDiv	{
 	width: 100%;
 }
@@ -141,8 +201,14 @@ label	{
 	text-align: left;
 }
 #hierarchyDiv	{
-	height: 20px;
-	padding: 1% 2% 1% 0;
+	font-family: "Arial Narrow", Arial, Helvetica, sans-serif;
+	font-size: 9pt;
+	padding: 0.25em;
+	vertical-align: middle;
+	background-color: #f8f8f8;
+}
+#hierarchyDiv>div	{
+	display: inline-block;
 }
 #treeControlDiv	{
 	height: 100px;

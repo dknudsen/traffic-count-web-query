@@ -4,6 +4,16 @@ CTPS.countsApp = {};
 CTPS.countsApp.drawVertices = [];
 CTPS.countsApp.aoi = null;
 CTPS.countsApp.queryThreshold = 0.01;
+CTPS.countsApp.nestLevels = [];
+CTPS.countsApp.fieldDict = {
+	"COUNT_LOCATION_ID": {"label": "Loc. ID", "paramName": "loc"},
+	"TYPE": {"label": "Type", "paramName": "type"},
+	"DATA_TABLE": {"label": "Interval", "paramName": "intSel"},
+	"DIR": {"label": "Dir.", "paramName": "dir"},
+	"DATE_START": {"label": "Date", "paramName": "dtSt"},
+	"LANE_RANGE": {"label": "Lane range", "paramName": "lr"},
+	"CATEGORY_CODE": {"label": "Class", "paramName": "cat"}
+}
 
 CTPS.countsApp.initSubmit = function() {
 	// init the map control
@@ -125,6 +135,37 @@ CTPS.countsApp.initSubmit = function() {
 															 CTPS.countsApp.queryOnControlChange();
 															 });
 	$('#queryProjDiv select').on('change', CTPS.countsApp.queryOnControlChange);
+	$('#limitToSelected').on('click', function() {
+		var savedLocIDControl, savedTypeControl, savedADTElem, savedIntSelElem, savedAggrControl, savedIntLimitControl;
+		return function(e) {
+										selfRef = $('#' + e.target.id);
+										if (selfRef.text() == "Narrow to selected") {
+											savedLocIDControl = $("#locIDControl").val();
+											savedTypeControl = $("#typeControl").val();
+											savedADTElem = document.forms['theForm'].elements['adt'].value;
+											savedIntSelElem = document.forms['theForm'].elements['intSel'].value;
+											savedAggrControl = $("#aggr").prop("checked");
+											savedIntLimitControl = $("#intLimit").prop("checked");
+											selfRef.text("Clear restriction to selected");
+											CTPS.countsApp.setFormFromSelectedNode(CTPS.countsApp.getTreeNodeKeys($(".tree-node-select")[0].parentNode.id));
+										} else {
+											selfRef.text("Narrow to selected");
+											selfRef.prop("disabled",d3.selectAll(".tree-node-select").empty() ? "disabled" : "");
+											document.forms['theForm'].elements[CTPS.countsApp.fieldDict["DIR"].paramName].value = "";
+											document.forms['theForm'].elements[CTPS.countsApp.fieldDict["DATE_START"].paramName].value = "";
+											document.forms['theForm'].elements[CTPS.countsApp.fieldDict["LANE_RANGE"].paramName].value = "";
+											document.forms['theForm'].elements[CTPS.countsApp.fieldDict["CATEGORY_CODE"].paramName].value = "";
+											$("#locIDControl").val(savedLocIDControl);
+											$("#typeControl").val(savedTypeControl);
+											document.forms['theForm'].elements['adt'].value = savedADTElem;
+											document.forms['theForm'].elements['intSel'].value = savedIntSelElem;
+											$("#aggr").prop("checked", savedAggrControl);
+											$("#intLimit").prop("checked", savedIntLimitControl);
+										}
+										CTPS.countsApp.queryOnControlChange();
+										return false;
+		}
+										}());
 	$('#download').on('click', function(e) { 
 										if ($('#download').prop('zipFile')) {
 											window.open($('#download').prop('zipFile'))
@@ -140,6 +181,29 @@ CTPS.countsApp.initSubmit = function() {
 	CTPS.countsApp.queryOnControlChange();
 
 }; // CTPS.countsApp.init()
+
+CTPS.countsApp.setFormFromSelectedNode = function(selectedKeys) {
+	for (key of selectedKeys) {
+		if (key.key == "DIR" || key.key == "DATE_START" || key.key == "LANE_RANGE" || 
+			key.key == "CATEGORY_CODE" || key.key == "COUNT_LOCATION_ID") { 
+			document.forms['theForm'].elements[CTPS.countsApp.fieldDict[key.key].paramName].value = 
+				(key.keyValue == "NV" ? "" : key.keyValue);
+		} else if (key.key == "TYPE") {
+			$("#typeControl").val($("#typeControl option").filter(function() 
+				{ return this.childNodes[0] && this.childNodes[0].textContent == key.keyValue })[0].value);
+		} else if (key.key == "DATA_TABLE") {
+			if (key.keyValue == "spanning") document.forms['theForm'].elements['adt'].value = 'a';
+			else if (key.keyValue == "monthly") document.forms['theForm'].elements['adt'].value = 'm';
+			else {
+				$("#aggr").prop("checked",false);
+				$("#intLimit").prop("checked",false);
+				if (key.keyValue == "hourly") document.forms['theForm'].elements['intSel'].value = '60';
+				else if (key.keyValue == "half_hourly") document.forms['theForm'].elements['intSel'].value = '30';
+				else if (key.keyValue == "quarter_hourly") document.forms['theForm'].elements['intSel'].value = '15';
+			}
+		}
+	}
+}
 
 CTPS.countsApp.toggleNestedCheckboxes = function(e) {
 	var targCheckbox = $('#' + (typeof(e) == "string" ? e : e.target.id));
@@ -177,7 +241,7 @@ CTPS.countsApp.updateOptionList = function(selObj, data, optTextAccessFunc, optV
 
 CTPS.countsApp.initOnScreenTimer = function() {
 	CTPS.countsApp.timerRunning = true;
-	$('#treeControlDiv').html('Query sent');
+	$('#respStatsDiv').html('Query sent');
 	window.setTimeout(CTPS.countsApp.continueOnScreenTimer, 1000);
 }
 
@@ -185,16 +249,219 @@ CTPS.countsApp.continueOnScreenTimer = function() {
 	if(CTPS.countsApp.timerRunning) {
 		window.setTimeout(CTPS.countsApp.continueOnScreenTimer, 1000);
 		if($('#timerElapsedSeconds').length == 0) {
-			$('#treeControlDiv').html('Waiting for server response... <span id="timerElapsedSeconds">1</span>');
+			$('#respStatsDiv').html('Waiting for server response... <span id="timerElapsedSeconds">1</span>');
 		} else {
-			$('#treeControlDiv').html('Waiting for server response... <span id="timerElapsedSeconds">' + String(parseInt($('#timerElapsedSeconds').text(),10) + 1) + '</span>');
+			$('#respStatsDiv').html('Waiting for server response... <span id="timerElapsedSeconds">' + String(parseInt($('#timerElapsedSeconds').text(),10) + 1) + '</span>');
 		}
 	}
 }
 
 CTPS.countsApp.clearOnScreenTimer = function() {
 	CTPS.countsApp.timerRunning = false;
-	$('#treeControlDiv').html('Response received. Proceeding with additional processing.');
+	$('#respStatsDiv').html('Response received. Proceeding with additional processing.');
+}
+
+CTPS.countsApp.handleTreeNodeSelect = function(e) {
+	var filteredTable, nodeKeysInCountParts, nodeKeysInData;
+	var selfSelect = d3.select("#" + e.target.parentNode.id + ">.tree-node-label");
+	if (selfSelect.classed("tree-node-select")) {
+		selfSelect.classed("tree-node-select", false);
+		$('#limitToSelected').prop("disabled","disabled");
+	} else {
+		d3.selectAll(".tree-node-select").classed("tree-node-select", false);
+		selfSelect.classed("tree-node-select", true);
+		$('#limitToSelected').prop("disabled","");
+		nodeKeysInCountParts = CTPS.countsApp.getTreeNodeKeys(e.target.parentNode.id);
+		if($('#limitToSelected').text() !== "Narrow to selected") CTPS.countsApp.setFormFromSelectedNode(nodeKeysInCountParts);
+		if (typeof(CTPS.countsApp.data.data_tables) !== 'undefined') {
+			$('#responseOutputDiv').empty();
+			for (data_table in CTPS.countsApp.data.data_tables) {	
+				nodeKeysInData = [];
+				// node keys must be translated for data table context because keys may be in different columns in count_parts
+				for (nodeKey of nodeKeysInCountParts) {
+					nodeKeysInData.push( {  
+						"key": nodeKey.key, 
+						"keyValue": nodeKey.keyValue, 
+						"col": CTPS.countsApp.data.data_tables[data_table].COLUMNS.findIndex( function(d) { return d === nodeKey.key } )
+					} );
+				}
+				filteredTable = {
+					"DATA": CTPS.countsApp.data.data_tables[data_table].DATA
+						.filter(function(tableRow) {
+							for (nodeKey of this.nodeKeys) {
+								if ((nodeKey.keyValue === "NV" ? "" : nodeKey.keyValue) != tableRow[nodeKey.col]) return false;
+							}
+							return true;
+						}, { "nodeKeys": nodeKeysInData } ),
+					"COLUMNS": CTPS.countsApp.data.data_tables[data_table].COLUMNS
+				};
+				if (filteredTable.DATA.length) CTPS.countsApp.showTable(data_table, filteredTable);
+			}
+		}
+	}
+}
+
+CTPS.countsApp.createTreeNode = function(d) {
+	var newNodeExpander = document.createElement("div");
+	newNodeExpander.setAttribute("class", "tree-node-expander");
+	newNodeExpander.textContent = "+";
+	newNodeExpander.onclick = function(e) {
+			var selfSelect = $("#" + e.target.parentNode.id + ">.tree-node-expander");
+			var parentSelect = d3.select("#" + e.target.parentNode.id);
+			selfSelect.text((selfSelect.text() == "+") ? "-" : "+");
+			parentSelect.classed("hide-children", !parentSelect.classed("hide-children"));
+		};
+	var newNodeLabel = document.createElement("div");
+	newNodeLabel.setAttribute("class", "tree-node-label");
+	// newNodeLabel.textContent = d.key;
+	newNodeLabel.onclick = CTPS.countsApp.handleTreeNodeSelect;
+	newNodeLabel.onmouseover = function(e) { d3.select("#" + e.target.parentNode.id + ">.tree-node-label").classed("tree-node-hilite", true)};
+	newNodeLabel.onmouseout = function(e) { d3.select("#" + e.target.parentNode.id + ">.tree-node-label").classed("tree-node-hilite", false)};
+	var newNode = document.createElement("div");
+	newNode.appendChild(newNodeExpander);
+	newNode.appendChild(newNodeLabel);
+	return newNode;
+}
+
+CTPS.countsApp.updateCountPartTreeControl = function() {
+	
+	var keyFunctionMaker = function(i) { return function(d) { return (d[i] !== "" ? d[i] : "NV"); }; };
+	var keySortFunction = function(level) {
+		var colType = CTPS.countsApp.data.count_parts_col_types[CTPS.countsApp.nestLevels[level].key];
+		if (colType == "VARCHAR") return d3.ascending;
+		else if (colType == "NUMERIC") return function(a, b) { return Number(a.key) - Number(b.key);};
+		else if (colType == "TIMESTAMP") return function(a, b) { return new Date(a.key) - new Date(b.key); };
+		else return d3.ascending;
+	}
+	CTPS.countsApp.nest = d3.nest();
+	for (key of CTPS.countsApp.nestLevels) {
+		CTPS.countsApp.nest.key(keyFunctionMaker(key.col))
+			.sortKeys(function(colType) {
+				if ( colType == "VARCHAR") return d3.ascending;
+				else if (colType == "NUMERIC") return function(a, b) { return Number(a) - Number(b); };
+				else if (colType == "TIMESTAMP") return function(a, b) { return new Date(a) - new Date(b); };
+				else return d3.ascending;
+			}(CTPS.countsApp.data.count_parts_col_types[key.key]));
+	}
+	
+	CTPS.countsApp.nest = CTPS.countsApp.nest.entries(CTPS.countsApp.data.count_parts.DATA);
+	
+	var treeNodes = d3.select("#treeControlDiv").selectAll(".tree-node-level1")
+		.data(CTPS.countsApp.nest, function(d) { return d.key; });
+	treeNodes.enter().append(CTPS.countsApp.createTreeNode)
+			.attr("id", function(d, n) { return "tree-" + n;})
+			.classed({"tree-node": true, "tree-node-level1": true, "hide-children": true});
+	treeNodes.select(".tree-node-label").text(function(d) { return d.key; });
+	treeNodes.exit().remove();
+	treeNodes.sort(keySortFunction(0));
+	for (i = 1; i < CTPS.countsApp.nestLevels.length; i++) {
+		treeNodes = d3.selectAll(".tree-node-level" + i).selectAll(".tree-node-level" + (i + 1))
+			.data(function(d) { return d.values; }, function(d) { return d.key; });
+		treeNodes.enter().append(CTPS.countsApp.createTreeNode)
+				.attr("id", function(d, n) { return this.parentNode.id + "-" + n;})
+				.classed("tree-node", true)
+				.classed("tree-leaf", i == CTPS.countsApp.nestLevels.length - 1)
+				.classed("tree-node-level" + (i + 1), true)
+				.classed("hide-children", true);
+		treeNodes.select(".tree-node-label").text(function(d) { return d.key; });
+		treeNodes.exit().remove();
+		treeNodes.sort(keySortFunction(i));
+	}
+	$("#limitToSelected").prop("disabled",d3.selectAll(".tree-node-select").empty() ? "disabled" : "");
+}
+
+CTPS.countsApp.getTreeNodeKeys = function(nodeId) {
+	var nodeKeys = [];
+	var d3Node = d3.select("#" + nodeId);
+	var className, level
+	while (d3Node.classed("tree-node")) {
+		className = d3Node.property("className");
+		level = className.substr(className.indexOf("tree-node-level") + 15, 1) - 1;
+		nodeKeys.push({
+			"key": CTPS.countsApp.nestLevels[level].key,
+			"col": CTPS.countsApp.nestLevels[level].col,
+			"keyValue": d3Node.data()[0].key
+		});
+		d3Node = d3.select("#" + d3Node.property("parentNode").id);
+	}
+	return nodeKeys;
+}
+
+CTPS.countsApp.showHierarchy = function() {
+	var hierarchyLevels = d3.select("#hierarchyDiv").selectAll(".hierarchyLevel").data(CTPS.countsApp.nestLevels);
+	hierarchyLevels.enter()
+		.append("div")
+		.classed("hierarchyLevel", true)
+		.attr( { "id": function(d, i) { return "hierarchy-level-" + i; },
+				"draggable": "true",
+				"ondragstart": "CTPS.countsApp.handleNestLevelDrag(event);",
+				"ondragover": "CTPS.countsApp.handleNestLevelOver(event);",
+				"ondrop": "CTPS.countsApp.handleNestLevelDrop(event);"
+		});
+	hierarchyLevels.text(function(d) { return CTPS.countsApp.fieldDict[d.key].label + " >"; });
+	if (d3.select(".hierarchyLabelDiv").empty()) {
+		d3.select("#hierarchyDiv")
+			.append("div")
+			.classed("hierarchyLabelDiv", true)
+			.attr( { "id": "hierarchy-level-" + CTPS.countsApp.nestLevels.length,
+					"ondragover": "CTPS.countsApp.handleNestLevelOver(event);",
+					"ondrop": "CTPS.countsApp.handleNestLevelDrop(event);"
+			})
+			.text("Tree hierarchy (drag to reorder)");
+	}
+}
+
+CTPS.countsApp.handleNestLevelDrag = function(e) {
+	e.dataTransfer.setData("text/plain", e.target.id);
+}
+
+CTPS.countsApp.handleNestLevelOver = function(e) {
+	e.dataTransfer.dropEffect = "move";
+	e.preventDefault();
+}
+
+CTPS.countsApp.handleNestLevelDrop = function(e) {
+	e.preventDefault();
+	var fromLevel = e.dataTransfer.getData("text/plain").slice(-1), toLevel = e.target.id.slice(-1);
+	if (fromLevel >= toLevel) {
+		CTPS.countsApp.nestLevels.splice(toLevel,0,CTPS.countsApp.nestLevels.splice(fromLevel,1)[0]);
+	} else { 
+		CTPS.countsApp.nestLevels.splice(toLevel - 1, 0, CTPS.countsApp.nestLevels.splice(fromLevel,1)[0]); 
+	}
+	CTPS.countsApp.showHierarchy();
+	CTPS.countsApp.updateCountPartTreeControl();
+	console.log("from: " + e.dataTransfer.getData("text/plain") + "; to: " + e.target.id);
+}
+
+CTPS.countsApp.showTable = function(tableName, table) {
+	strHTML = '<h3>' + (tableName == 'spanning' ? 'Yearly or other time span' : tableName) + '</h3>';
+	strHTML += '<table><thead><tr>';
+	for (col = 0; col < table.COLUMNS.length; col++) {
+		strHTML += '<th><div class="' + table.COLUMNS[col].replace(/^[AP]M_.+$/, 'count_data') + '">' + 
+					table.COLUMNS[col].replace(/_/g, ' ') + '</div></th>';
+	}
+	strHTML += '</tr></thead><tbody>';
+	for (row = 0; row < table.DATA.length; row++) {
+		strHTML += '<tr>';
+		for (col = 0; col < table.DATA[row].length; col++) {
+			strHTML += '<td>' + table.DATA[row][col] + '</td>';
+		}
+		strHTML += '</tr>';
+	}
+	strHTML += '</tbody></table>';
+	// Note: the code below was a lot slower at rendering the huge tables needed than the straightforward loops above
+	/* $('#responseOutputDiv')
+		.append($('<h3>').text(data_table == 'spanning' ? 'Yearly or other time span' : data_table))
+		.append($('<table>')
+				.append($('<thead>').append(CTPS.countsApp.data.data_tables[data_table].COLUMNS.reduce(function(prevVal, currVal) {
+								return prevVal.append($('<th>').text(currVal));
+								}, $('<tr>'))))
+				.append(CTPS.countsApp.data.data_tables[data_table].DATA.reduce(function(preVal, currVal) {
+							 return preVal.append(currVal.reduce(function(prevVal, currVal) {
+														  return prevVal.append($('<td>').text(currVal));
+														  }, $('<tr>')));
+							 }, $('<tbody>')))); */
+	$('#responseOutputDiv').append(strHTML);
 }
 
 CTPS.countsApp.queryOnControlChange = function() {
@@ -307,19 +574,28 @@ CTPS.countsApp.queryOnControlChange = function() {
 						$('#aggr').prop('checked',false);
 						$('#intLimit').prop('checked',false);
 					}
+					
+					if (typeof(data.count_parts) === 'undefined') {
+						$("#treeControlDiv").hide();
+						$("#hierarchyDiv").hide();
+						$("#queryFinalDataDiv").hide();
+					}
+					
 				}
 	
 				if (typeof(CTPS.countsApp.data.count_parts) !== 'undefined') {
-					CTPS.countsApp.nest = d3.nest()
-					.key(function(d) { return d[0] }).sortKeys(d3.ascending)
-					.key(function(d) { return d[12] }).sortKeys(d3.ascending)
-					.key(function(d) { return d[20] }).sortKeys(d3.ascending)
-					.key(function(d) { return d[16] }).sortKeys(d3.ascending)
-					.key(function(d) { return d[21] }).sortKeys(d3.ascending)
-					.key(function(d) { return d[19] }).sortKeys(d3.ascending)
-					.entries(CTPS.countsApp.data.count_parts.DATA);
-					CTPS.countsApp.treeNodes = d3.layout.tree().children(function(d) { return d.values }).nodes(CTPS.countsApp.nest);
-					CTPS.countsApp.mapResultLayer.setParams({'cql_filter': 'COUNT_LOCATION_ID IN (' + CTPS.countsApp.treeNodes.pop().map(function(d) { return d.key }).join() + ')'});
+					if (CTPS.countsApp.nestLevels.length == 0) {
+						for (key of ["COUNT_LOCATION_ID", "TYPE", "DATA_TABLE", "DIR", "DATE_START", "LANE_RANGE", "CATEGORY_CODE"]) {
+							var col = CTPS.countsApp.data.count_parts.COLUMNS.findIndex( function(d) { return d === key } );
+							if (col >= 0) CTPS.countsApp.nestLevels.push( { "key": key, "col": col } );
+						}
+						CTPS.countsApp.showHierarchy();
+					}
+					$("#queryFinalDataDiv").show();
+					$("#hierarchyDiv").show();
+					CTPS.countsApp.updateCountPartTreeControl();
+					$("#treeControlDiv").show();
+					CTPS.countsApp.mapResultLayer.setParams({'cql_filter': 'COUNT_LOCATION_ID IN (' + CTPS.countsApp.nest.map(function(d) { return d.key }).join() + ')'});
 				} else {
 					CTPS.countsApp.mapResultLayer.setParams({'cql_filter': ''});
 					CTPS.countsApp.dbSize = parseInt(data.dataTableCounts.data_hourly) + parseInt(data.dataTableCounts.data_half_hourly) + 
@@ -339,39 +615,12 @@ CTPS.countsApp.queryOnControlChange = function() {
 					respMsg += 'Total count_part records returned: <strong>' + String(data.count_parts.DATA.length).replace(/\d(?=(\d{3})+$)/g, '$&,') + '</strong>.<br>';
 					respMsg += 'Data rows estimated from count_part records: <strong>' + String(data.estDataRows).replace(/\d(?=(\d{3})+$)/g, '$&,') + '</strong>.<br>';
 				}
-				$('#treeControlDiv').html(respMsg);
+				$('#respStatsDiv').html(respMsg);
 				
 				$('#responseOutputDiv').empty();
 				
 				for (data_table in CTPS.countsApp.data.data_tables) {
-					strHTML = '<h3>' + (data_table == 'spanning' ? 'Yearly or other time span' : data_table) + '</h3>';
-					strHTML += '<table><thead><tr>';
-					for (col = 0; col < CTPS.countsApp.data.data_tables[data_table].COLUMNS.length; col++) {
-						strHTML += '<th><div class="' + CTPS.countsApp.data.data_tables[data_table].COLUMNS[col].replace(/^[AP]M_.+$/, 'count_data') + '">' + 
-									CTPS.countsApp.data.data_tables[data_table].COLUMNS[col].replace(/_/g, ' ') + '</div></th>';
-					}
-					strHTML += '</tr></thead><tbody>';
-					for (row = 0; row < CTPS.countsApp.data.data_tables[data_table].DATA.length; row++) {
-						strHTML += '<tr>';
-						for (col = 0; col < CTPS.countsApp.data.data_tables[data_table].DATA[row].length; col++) {
-							strHTML += '<td>' + CTPS.countsApp.data.data_tables[data_table].DATA[row][col] + '</td>';
-						}
-						strHTML += '</tr>';
-					}
-					strHTML += '</tbody></table>';
-					$('#responseOutputDiv').append(strHTML);
-					// Note: the code below was a lot slower at rendering the huge tables needed than the straightforward loops above
-					/* $('#responseOutputDiv')
-						.append($('<h3>').text(data_table == 'spanning' ? 'Yearly or other time span' : data_table))
-						.append($('<table>')
-								.append($('<thead>').append(CTPS.countsApp.data.data_tables[data_table].COLUMNS.reduce(function(prevVal, currVal) {
-												return prevVal.append($('<th>').text(currVal));
-												}, $('<tr>'))))
-								.append(CTPS.countsApp.data.data_tables[data_table].DATA.reduce(function(preVal, currVal) {
-											 return preVal.append(currVal.reduce(function(prevVal, currVal) {
-																		  return prevVal.append($('<td>').text(currVal));
-																		  }, $('<tr>')));
-											 }, $('<tbody>')))); */
+					CTPS.countsApp.showTable(data_table, CTPS.countsApp.data.data_tables[data_table]);
 				}
 				
 				document.forms['theForm'].elements['mode'].value = "both";
@@ -381,8 +630,9 @@ CTPS.countsApp.queryOnControlChange = function() {
 			}
 		  }).fail(function() {
 			  CTPS.countsApp.responsePending = false;
+			  CTPS.countsApp.clearOnScreenTimer();
 			  $('#download').val('Create download').prop('disabled','');
-			  $('#treeControlDiv').html('The last query failed for some reason.');
+			  $('#respStatsDiv').html('The last query failed for some reason.');
 			  $('#responseOutputDiv').empty();
 		  });
 	CTPS.countsApp.initOnScreenTimer();

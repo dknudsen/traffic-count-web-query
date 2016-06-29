@@ -25,6 +25,10 @@
         
         	<input id="modeControl" name="mode" type="hidden" value="init">
             <input id="respFracThreshold" name="erft" type="hidden">
+			<input id="directionControl" name="dir" type="hidden">
+			<input id="dateStartControl" name="dtSt" type="hidden">
+			<input id="laneRangeControl" name="lr" type="hidden">
+			<input id="categoryControl" name="cat" type="hidden">
     
             <div id="queryGeoDiv">
                 <div id="queryMapControl"><div style="margin-top:40%;"></div>
@@ -139,13 +143,12 @@
             </div>
             
             <div id="queryRespPartsDiv">
-            	<div id="hierarchyDiv">
-                    <h2>Which</h2>
-                </div>
-                <div id="treeControlDiv"></div>
+				<h2>Which</h2>
                 <div id="queryFinalDataDiv">
-                	<button disabled>Show all</button><button id="download" disabled>Create download</button>
+                	<button id="limitToSelected" disabled>Narrow to selected</button><button id="download" disabled>Create download</button>
                 </div>
+            	<div id="hierarchyDiv"></div>
+                <div id="treeControlDiv"></div>
             </div>
     
     	</form>
@@ -154,6 +157,7 @@
     
     	<div id="responseFormatDiv">
         	<h2>How</h2>
+			<div id="respStatsDiv"></div>
         </div>
         
         <div id="responseOutputDiv">
