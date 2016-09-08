@@ -18,7 +18,13 @@
 
 <body><div id="allDiv">
 
-	<h1>Traffic Counts</h1>
+	<div id="prevVersionDiv"><strong>Help!</strong> I don't like or can't use this new, <strong>alpha version</strong> of the traffic count query application. 
+		<a href="http://ctps.org/apps/counts/dev/index_geoserver.cfm">Take me back to the previous one</a>.
+		But let me me 
+		<a href="mailto:dknudsen@ctps.org?Subject=About%20that%20new%20query%20interface%20to%20the%20CTPS%20traffic%20count%20database..." target="_top">tell you</a>
+		what was wrong before I go.</div>
+
+	<h1>Traffic Counts from the CTPS Database</h1>
 
 	<div id="queryDiv">
     	<form id="theForm" name="theForm" method="post" action="query_count_parts.cfm" >
@@ -40,7 +46,7 @@
                     <label for="routeControl">Route</label><select id="routeControl" name="rt"><option value=""></option></select>
                     <label for="streetControl">Street</label><input id="streetControl" name="st" type="text">
                     <input id="streetExactControl" name="stX" type="checkbox"><label for="streetExactControl">Exact matches only</label><br>
-                    <label for="regionControl">Region</label><input id="regionControl" name="rg" type="text">
+                    <label for="regionControl">Region</label><input id="regionControl" title="This field is not hooked up yet" name="rg" type="text">
                     <label for="funcClassControl">Functional classification</label><select id="funcClassControl" name="fc">
                     	<option value=""></option>
                     	<option value="1">Interstate</option>
@@ -164,7 +170,7 @@
         </div>
         
         <div id="responseManipulationDiv">
-        	<button>Print</button>
+        	<button title="Not implemented yet">Print</button>
         </div>
     
     </div>

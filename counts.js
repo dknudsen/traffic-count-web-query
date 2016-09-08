@@ -31,6 +31,7 @@ CTPS.countsApp.initSubmit = function() {
 		layers: 'MPODATA.CTPS_COUNT_LOCATIONS',styles: 'traffic_counts_selected', cql_filter: 'COUNT_LOCATION_ID=0', format: 'image/png',transparent: true
 		}).addTo(CTPS.countsApp.map);	// add WMS layer showing count locations found in query results
 
+	$('.leaflet-tile-pane').attr('title','Single-click to start drawing a selection polygon')
 	CTPS.countsApp.map.on('click',function(e) { 
 		// only on click if location is sufficiently different from last click (i.e. not the second click of a double-click)
 		if (CTPS.countsApp.drawVertices.length == 0 || !CTPS.countsApp.drawVertices[CTPS.countsApp.drawVertices.length-1].equals(e.latlng)) {
@@ -38,6 +39,7 @@ CTPS.countsApp.initSubmit = function() {
 			if (CTPS.countsApp.drawVertices.length == 1) {
 				// draw first point
 				CTPS.countsApp.drawShape = new L.circleMarker(e.latlng,{"radius": 8,'color': '#FF0','fillColor': '#FF0', 'clickable': false}).addTo(CTPS.countsApp.map);
+				$('.leaflet-objects-pane').attr('title','Click again to add another vertex to the selection polygon')
 			} else if (CTPS.countsApp.drawVertices.length == 2) {
 				// replace first point with first edge
 				CTPS.countsApp.map.removeLayer(CTPS.countsApp.drawShape);
@@ -60,6 +62,7 @@ CTPS.countsApp.initSubmit = function() {
 						CTPS.countsApp.aoi = null;
 						$('#AOIControl').val('');
 						CTPS.countsApp.queryOnControlChange();
+						$('.leaflet-objects-pane').attr('title','Single-click to start drawing a selection polygon')
 					});
 					CTPS.countsApp.aoi.on('click', function(e) { return false; });
 					var polyProjected = new L.Polygon(CTPS.countsApp.aoi.getLatLngs().map(
@@ -68,7 +71,9 @@ CTPS.countsApp.initSubmit = function() {
 					CTPS.countsApp.drawVertices = [];
 					CTPS.countsApp.drawShape = null;
 					CTPS.countsApp.queryOnControlChange();
+					$('.leaflet-objects-pane').attr('title','Double-click a polygon to clear it or just create a new one')
 				});
+				$('.leaflet-objects-pane').attr('title','Double-click to finish the selection polygon')
 			} else CTPS.countsApp.drawShape.addLatLng(e.latlng); // add vertices to prior polygon
 		}
 	});  // set up event handler for map clicks (designate areas of interest using vector features)

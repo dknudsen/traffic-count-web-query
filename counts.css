@@ -86,6 +86,10 @@ label	{
 .hide-children>.tree-node {
 	display: none;
 }
+#prevVersionDiv	{
+	padding: 2pt;
+	background-color: pink;
+}
 #allDiv	{
 	width: 100%;
 }
